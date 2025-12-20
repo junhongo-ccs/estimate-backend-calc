@@ -1,0 +1,16 @@
+config_version: "2025-12"
+
+# 基本単価（1画面あたり、円）
+base_cost_per_screen: 120000
+
+# 難易度係数
+difficulty_multipliers:
+  low: 0.8      # 簡易画面: 80%
+  medium: 1.0   # 標準画面: 100%
+  high: 1.3     # 高難度画面: 130%
+
+# バッファ係数（リスク・予備費）
+buffer_multiplier: 1.1  # 10%上乗せ
+
+# 通貨
+currency: "JPY"
