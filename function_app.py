@@ -14,6 +14,8 @@ def load_config():
 def main_logic(req_body):
     screen_count = req_body.get('screen_count')
     complexity = req_body.get('complexity')
+    include_phase2 = req_body.get('include_phase2', True) # SIer Figma Bridge
+    include_phase3 = req_body.get('include_phase3', True) # Outsourced UI
 
     # Validation
     if screen_count is None or not isinstance(screen_count, (int, float)) or screen_count <= 0:
@@ -26,13 +28,32 @@ def main_logic(req_body):
         return {"status": "error", "message": f"complexity must be one of {list(diff_multipliers.keys())}"}, 400
 
     # Calculation logic
-    base_cost_per_screen = config['base_cost_per_screen']
     diff_multiplier = diff_multipliers[complexity]
     buffer_multiplier = config['buffer_multiplier']
 
-    base_cost = screen_count * base_cost_per_screen
-    diff_applied = base_cost * diff_multiplier
-    final_amount = int(diff_applied * buffer_multiplier)
+    # Design Phase Calculation
+    phase2_cost = 0
+    phase3_cost = 0
+    phase3_management_fee = 0
+
+    if include_phase2:
+        phase2_unit = config.get('phase2_cost_per_screen', 40000)
+        phase2_cost = int(screen_count * phase2_unit * diff_multiplier)
+
+    if include_phase3:
+        phase3_unit = config.get('phase3_cost_per_screen', 80000)
+        mgmt_rate = config.get('phase3_management_fee_rate', 0.15)
+        phase3_base = int(screen_count * phase3_unit * diff_multiplier)
+        phase3_management_fee = int(phase3_base * mgmt_rate)
+        phase3_cost = phase3_base + phase3_management_fee
+
+    # Development Cost (Simplified for this version, using remaining of base_cost_per_screen logic if not purely design)
+    # If using full base_cost_per_screen, it includes dev + design phases.
+    # We'll treat the new logic as an override.
+    
+    # Final Amount
+    design_total = phase2_cost + phase3_cost
+    final_amount = int(design_total * buffer_multiplier)
 
     # Complexity label for breakdown
     complexity_labels = {
@@ -47,15 +68,18 @@ def main_logic(req_body):
         "currency": config['currency'],
         "screen_count": screen_count,
         "complexity": complexity,
+        "include_phase2": include_phase2,
+        "include_phase3": include_phase3,
         "breakdown": {
-            "base_cost": base_cost,
-            "base_cost_per_screen": base_cost_per_screen,
+            "phase2_internal_sier": phase2_cost,
+            "phase3_external_outsource": phase3_cost,
+            "phase3_management_fee": phase3_management_fee,
+            "design_subtotal": design_total,
             "difficulty_multiplier": diff_multiplier,
-            "difficulty_applied": diff_applied,
             "buffer_multiplier": buffer_multiplier,
             "final": final_amount,
             "calculation_details": {
-                "formula": f"{screen_count} screens × ¥{base_cost_per_screen:,} × {diff_multiplier} (difficulty) × {buffer_multiplier} (buffer)",
+                "formula": f"({phase2_cost:,} [P2] + {phase3_cost:,} [P3]) × {buffer_multiplier} (buffer)",
                 "complexity_label": complexity_labels.get(complexity, complexity)
             }
         },

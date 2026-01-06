@@ -3,6 +3,13 @@ config_version: "2025-12"
 # 基本単価（1画面あたり、円）
 base_cost_per_screen: 120000
 
+# デザインフェーズ別単価（1画面あたり、円）
+# Phase 2: 設計（SIer内製）
+phase2_cost_per_screen: 40000 
+# Phase 3: ビジュアル制作（外注費 + 管理費）
+phase3_cost_per_screen: 80000
+phase3_management_fee_rate: 0.15  # 外注管理費 15%
+
 # 難易度係数
 difficulty_multipliers:
   low: 0.8      # 簡易画面: 80%
