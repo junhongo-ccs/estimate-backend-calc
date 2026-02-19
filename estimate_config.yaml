@@ -1,29 +1,83 @@
 config_version: "2026-01"
 
-# ===== 人日単価 =====
-sier_daily_rate: 50000        # SIer内製: ¥50,000/人日
-outsource_daily_rate: 80000   # 外注: ¥80,000/人日
+# =========================
+# Cost / Rates (per man-day)
+# =========================
+daily_rates:
+  sier_internal: 50000      # SIer内製: ¥50,000/人日
+  outsource: 80000          # 外注: ¥80,000/人日
 
-# ===== 開発フェーズ =====
-dev_man_days_per_screen: 1.5  # 1画面あたりの開発工数（人日）
+# =========================
+# Policy / Safety switches
+# =========================
+policy:
+  # Phase 2 principle: productivity must be explicitly confirmed by user for STEP/FP.
+  # Calc MUST raise an error if missing (no internal defaults).
+  require_explicit_productivity_for_step_fp: true
 
-# ===== デザインフェーズ =====
-# Phase 3: 外注管理費率
-phase3_management_fee_rate: 0.15  # 15%
+  # If true, Calc must NOT read reference_productivity for calculation.
+  # reference_productivity exists only for Agent UI proposal/presets.
+  calc_must_ignore_reference_productivity: true
 
-# ===== 難易度係数 =====
+  # Phase 3: Vendor/Design confidence must be explicitly confirmed.
+  require_explicit_vendor_confidence: true
+
+# =========================
+# Development model (Screen)
+# =========================
+development:
+  man_days_per_screen: 1.5  # 1画面あたりの開発工数（人日）
+
+# =========================
+# Productivity presets (REFERENCE ONLY)
+# =========================
+# NOTE:
+# - These values are NOT used by Calc for computation.
+# - Agent may show these as selectable presets to the user.
+reference_productivity:
+  step:
+    # Unit must be explicit. If STEP is truly "steps", keep as steps.
+    # If it is actually LOC-based, rename method to "loc" or add conversion.
+    man_days_per_step:
+      standard: 0.05        # 20 steps/man-day (1/20)
+  fp:
+    man_days_per_fp:
+      standard: 1.0         # Example preset; user must confirm explicitly
+
+# =========================
+# Difficulty multipliers
+# =========================
 difficulty_multipliers:
-  low: 0.8      # 簡易: 80%
-  medium: 1.0   # 標準: 100%
-  high: 1.3     # 高難度: 130%
+  low: 0.8
+  medium: 1.0
+  high: 1.3
 
-# ===== バッファ係数 =====
-buffer_multiplier: 1.1  # 10%上乗せ（リスク・予備費）
+# =========================
+# Risk / buffer multiplier
+# =========================
+buffer_multiplier: 1.1      # 10%上乗せ（リスク・予備費）
 
-# ===== 通貨 =====
+# =========================
+# Design / Vendor management
+# =========================
+design:
+  # Phase 3: 外注管理費率
+  phase3_management_fee_rate: 0.15  # 15%
+  # Vendor Variance (Range based on confidence)
+  vendor_variance:
+    low: 0.4    # +/- 40% (Vague)
+    medium: 0.2 # +/- 20% (Standard)
+    high: 0.1   # +/- 10% (Fixed)
+
+# =========================
+# Currency
+# =========================
 currency: "JPY"
 
-# ===== 旧設定（互換性のため残す） =====
-base_cost_per_screen: 120000
-phase2_cost_per_screen: 40000
-phase3_cost_per_screen: 80000
+# =========================
+# Deprecated legacy fields (kept for backward compatibility)
+# =========================
+deprecated_legacy:
+  base_cost_per_screen: 120000
+  phase2_cost_per_screen: 40000
+  phase3_cost_per_screen: 80000

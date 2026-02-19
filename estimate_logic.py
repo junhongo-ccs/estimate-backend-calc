@@ -1,17 +1,41 @@
-import azure.functions as func
-import logging
+
 import json
-import yaml
-import os
 
-app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+# ==============================================================================
+# CONFIGURATION (Merged from estimate_config.yaml)
+# ==============================================================================
+CONFIG = {
+    "config_version": "2026-01",
+    "daily_rates": {
+        "sier_internal": 50000,      # SIer内製: ¥50,000/人日
+        "outsource": 80000           # 外注: ¥80,000/人日
+    },
+    "policy": {
+        "require_explicit_productivity_for_step_fp": True,
+        "calc_must_ignore_reference_productivity": True,
+        "require_explicit_vendor_confidence": True
+    },
+    "development": {
+        "man_days_per_screen": 1.5   # 1画面あたりの開発工数（人日）
+    },
+    "difficulty_multipliers": {
+        "low": 0.8,
+        "medium": 1.0,
+        "high": 1.3
+    },
+    "buffer_multiplier": 1.1,        # 10%上乗せ（リスク・予備費）
+    "design": {
+        "phase3_management_fee_rate": 0.15,
+        "vendor_variance": {
+            "low": 0.4,
+            "medium": 0.2,
+            "high": 0.1
+        }
+    },
+    "currency": "JPY"
+}
 
-def load_config():
-    config_path = os.path.join(os.path.dirname(__file__), "estimate_config.yaml")
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-# 工数マスタ
+# 工数マスタ (Feature Definitions)
 FEATURE_MAN_DAYS = {
     "auth": 5,              # ユーザー認証
     "list_search": 3,       # 一覧表示・検索
@@ -65,9 +89,15 @@ PHASE3_LABEL_MAP = {
     "アイコン・ロゴ": "logo_icon",
 }
 
+# ==============================================================================
+# LOGIC
+# ==============================================================================
+
 def resolve_keys(input_list, label_map, item_dict):
     """JPラベルを英語キーに変換し、有効なキーのみを抽出する"""
     resolved = []
+    if not input_list:
+        return []
     for item in input_list:
         if item in item_dict:
             resolved.append(item)
@@ -78,12 +108,19 @@ def resolve_keys(input_list, label_map, item_dict):
     return list(set(resolved))
 
 def main_logic(req_body):
-    config = load_config()
+    config = CONFIG
     
     # Common Params
     method = req_body.get('method', 'screen') 
     complexity = req_body.get('complexity', 'medium')
-    screen_count = req_body.get('screen_count', 10) 
+    
+    # Calculate screen_count from list if provided (TERASOLUNA style)
+    screens = req_body.get('screens', [])
+    if screens and isinstance(screens, list):
+        screen_count = len(screens)
+    else:
+        screen_count = req_body.get('screen_count', 10)
+        
     confidence = req_body.get('confidence') 
     
     # Method-specific Params
@@ -103,8 +140,10 @@ def main_logic(req_body):
 
     # Validate Confidence if Phase 3 (Vendor Design) items present
     has_phase3_items = (len(selected_phase3) > 0)
+    # Note: In Dify, creating a proper error response is tricky. 
+    # We will return a dict with status error instead of raising exception/HTTP 400.
     if require_explicit_conf and has_phase3_items and not confidence:
-         return {"status": "error", "message": "Missing required param: confidence (Required for Phase 3 / Vendor Design estimation)"}, 400
+         return {"status": "error", "message": "Missing required param: confidence (Required for Phase 3 / Vendor Design estimation)"}
 
     # Config Values
     diff_multipliers = config.get('difficulty_multipliers', {})
@@ -136,12 +175,12 @@ def main_logic(req_body):
 
     if method == 'step':
         if require_explicit_prod and (loc is None or man_days_per_unit is None):
-             return {"status": "error", "message": "Missing required params for STEP: loc, man_days_per_unit"}, 400
+             return {"status": "error", "message": "Missing required params for STEP: loc, man_days_per_unit"}
         dev_base_days = loc * man_days_per_unit
         
     elif method == 'fp':
         if require_explicit_prod and (fp_count is None or man_days_per_unit is None):
-             return {"status": "error", "message": "Missing required params for FP: fp_count, man_days_per_unit"}, 400
+             return {"status": "error", "message": "Missing required params for FP: fp_count, man_days_per_unit"}
         dev_base_days = fp_count * man_days_per_unit
         
     else:
@@ -251,39 +290,37 @@ def main_logic(req_body):
         },
         "config_version": config.get('config_version', '2026-01')
     }
-    return response_data, 200
+    return response_data
 
-@app.route(route="calculate_estimate", methods=["POST", "OPTIONS"])
-def calculate_estimate(req: func.HttpRequest) -> func.HttpResponse:
-    if req.method == "OPTIONS":
-        return func.HttpResponse(
-            "",
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type"
-            }
-        )
-    
-    logging.info('Processing estimation calculation request.')
+# ==============================================================================
+# DIFY ENTRYPOINT
+# ==============================================================================
 
-    try:
-        req_body = req.get_json()
-    except ValueError:
-        return func.HttpResponse(
-            json.dumps({"status": "error", "message": "Invalid JSON"}),
-            status_code=400,
-            mimetype="application/json"
-        )
+def main(args: dict) -> dict:
+    """
+    Dify Code Node entrypoint.
+    'args' is a dictionary containing the input variables from Dify.
+    """
+    # The 'main_logic' function expects a dictionary with the same structure
+    # as the original Azure Function's request body.
+    # We pass the Dify 'args' directly to it.
+    result = main_logic(args)
+    return result
 
-    result_data, status_code = main_logic(req_body)
+# Example of how to run this script locally for testing
+if __name__ == '__main__':
+    # This is a sample input, mirroring what Dify would provide.
+    # In Dify, these would be set as input variables for the Code Node.
+    sample_input = {
+        "method": "screen",
+        "complexity": "medium",
+        "screen_count": 15,
+        "features": ["ユーザー認証", "CRUD操作", "決済機能"],
+        "phase2_items": ["IA設計", "WF作成"],
+        "phase3_items": ["UIデザイン", "デザインシステム"],
+        "confidence": "medium"
+    }
 
-    return func.HttpResponse(
-        json.dumps(result_data, ensure_ascii=False),
-        status_code=status_code,
-        mimetype="application/json",
-        headers={
-            "Access-Control-Allow-Origin": "*"
-        }
-    )
+    print("Running local test with sample input...")
+    output = main(sample_input)
+    print(json.dumps(output, indent=2, ensure_ascii=False))
