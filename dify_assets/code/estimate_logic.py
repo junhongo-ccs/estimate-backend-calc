@@ -18,26 +18,29 @@ from typing import List, Dict, Any
 # CONFIGURATION & CONSTANTS
 # =========================================================
 CONFIG = {
-    "config_version": "2026-02-BS",
+    "config_version": "2026-02-CCS-Standard-v2",
     "daily_rates": {
-        "sier_internal": 100000,  # 参考値（直接は使わず、ランク人月で計算）
+        "sier_internal": 100000,
         "outsource": 80000
     },
     # 生産性プロファイル（MD/FP相当係数）
+    # SI案件の全工程（要件定義〜QA）における標準生産性「10〜15 FP/人月」に準拠
+    # 1人月=20日のため、人日/FP = 20 / (FP/人月) となる。
+    # 10 FP/月 -> 2.0 人日/FP, 15 FP/月 -> 1.33 人日/FP
     "estimation_profiles": {
         "poc": {
             "label": "PoC/開発重視型",
             "productivity_factor": 0.075,
-            "description": "スピード重視（管理工数を抑制）"
+            "description": "【注意】SI案件の全工程（要件定義〜QA）には非適用。製造/実制作フェーズのみの参考値。"
         },
         "enterprise": {
             "label": "エンタープライズ型",
-            "productivity_factor": 1.4,
-            "description": "要件定義〜品質保証までの標準プロセスを含む"
+            "productivity_factor": 1.5, # 13.3 FP/人月に相当
+            "description": "要件定義〜品質保証までの標準プロセスを含む（標準モデル）"
         },
         "mission_critical": {
             "label": "高信頼性型",
-            "productivity_factor": 2.2,
+            "productivity_factor": 2.0, # 10 FP/人月に相当
             "description": "金融/基幹等の極めて高い品質基準"
         }
     },
@@ -45,7 +48,7 @@ CONFIG = {
     "fp_simplified": {
         "screen_weight": 20,  # FP/画面
         "table_weight": 15,   # FP/テーブル
-        "default_productivity": 0.075
+        "default_productivity": 1.5 # enterpriseをデフォルトに
     },
     # 難易度・納期・開発タイプ係数（工数側）
     "difficulty_multipliers": {"low": 0.8, "medium": 1.0, "high": 1.5, "very_high": 2.0},
@@ -71,34 +74,37 @@ CONFIG = {
 }
 
 # =========================================================
-# BS事業部：部門→(間接費単金[円/h], 本部販管費率, 全社販管費率)
+# BS事業部：部門→(間接費単金[円/h], プロパ労務費に対する販管費率)
+# Certified FY2026 BS Standard (SGA on Direct Labor)
 # =========================================================
 BS_ORG_CONFIG: Dict[str, Dict[str, float]] = {
+    # 【注意】sga_on_propa_labor_rate は直接労務費に乗算する新しい係数。
+    #  値は仮で旧本部販管費率+旧全社販管費率を暫定設定。実態に合わせて要調整。
     # --- ビジネスイノベーション ---
-    "ビジ・企画営業部":              {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
-    "ビジ・システム開発部":            {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
-    "ビジネスイノベーション事業部共通": {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ビジ・企画営業部":              {"indirect_per_hour": 2340, "sga_on_propa_labor_rate": 0.751},
+    "ビジ・システム開発部":            {"indirect_per_hour": 2340, "sga_on_propa_labor_rate": 0.751},
+    "ビジネスイノベーション事業部共通": {"indirect_per_hour": 2340, "sga_on_propa_labor_rate": 0.751},
     # --- SF&M ---
-    "ＳＦ＆Ｍ営業部":                {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
-    "ＳＦ＆Ｍ第１システム開発部":        {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
-    "ＳＦ＆Ｍ第２システム開発部":        {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
-    "ＳＦ＆Ｍ事業部（共通）":           {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ営業部":                {"indirect_per_hour": 2030, "sga_on_propa_labor_rate": 0.741},
+    "ＳＦ＆Ｍ第１システム開発部":        {"indirect_per_hour": 2030, "sga_on_propa_labor_rate": 0.741},
+    "ＳＦ＆Ｍ第２システム開発部":        {"indirect_per_hour": 2030, "sga_on_propa_labor_rate": 0.741},
+    "ＳＦ＆Ｍ事業部（共通）":           {"indirect_per_hour": 2030, "sga_on_propa_labor_rate": 0.741},
     # --- CS ---
-    "ＣＳ営業部":                   {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
-    "ＣＳ第１システム開発部":           {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
-    "ＣＳ第２システム開発部":           {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
-    "ＣＳシステム事業部（共通）":         {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳ営業部":                   {"indirect_per_hour": 1940, "sga_on_propa_labor_rate": 0.787},
+    "ＣＳ第１システム開発部":           {"indirect_per_hour": 1940, "sga_on_propa_labor_rate": 0.787},
+    "ＣＳ第２システム開発部":           {"indirect_per_hour": 1940, "sga_on_propa_labor_rate": 0.787},
+    "ＣＳシステム事業部（共通）":         {"indirect_per_hour": 1940, "sga_on_propa_labor_rate": 0.787},
     # --- DT ---
-    "ＤＴ営業部":                   {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
-    "ＤＴ第１開発部":                 {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
-    "ＤＴ第２開発部":                 {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
-    "ＤＴ事業部（共通）":              {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ営業部":                   {"indirect_per_hour": 2320, "sga_on_propa_labor_rate": 0.859},
+    "ＤＴ第１開発部":                 {"indirect_per_hour": 2320, "sga_on_propa_labor_rate": 0.859},
+    "ＤＴ第２開発部":                 {"indirect_per_hour": 2320, "sga_on_propa_labor_rate": 0.859},
+    "ＤＴ事業部（共通）":              {"indirect_per_hour": 2320, "sga_on_propa_labor_rate": 0.859},
     # --- 社会・科学システム ---
-    "社会・科学システム営業部":           {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
-    "データサイエンスシステム部":         {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
-    "社会・科学システム事業部（共通）":     {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "社会・科学システム営業部":           {"indirect_per_hour": 2220, "sga_on_propa_labor_rate": 0.886},
+    "データサイエンスシステム部":         {"indirect_per_hour": 2220, "sga_on_propa_labor_rate": 0.886},
+    "社会・科学システム事業部（共通）":     {"indirect_per_hour": 2220, "sga_on_propa_labor_rate": 0.886},
     # --- ソリューションビジネス推進室 ---
-    "ソリューションビジネス推進室":         {"indirect_per_hour": 3570, "hq_sga": 0.937, "corp_sga": 0.478},
+    "ソリューションビジネス推進室":         {"indirect_per_hour": 3570, "sga_on_propa_labor_rate": 1.415},
 }
 
 DEFAULT_BS_DEPT = "ビジネスイノベーション事業部共通"
@@ -267,25 +273,24 @@ def resolve_bs_org_rates(primary_dept: str, allocations: List[Dict[str, Any]] | 
         primary_dept = DEFAULT_BS_DEPT
     if not allocations:
         cfg = BS_ORG_CONFIG[primary_dept]
-        return (cfg["indirect_per_hour"], cfg["hq_sga"], cfg["corp_sga"])
+        return (cfg["indirect_per_hour"], cfg["sga_on_propa_labor_rate"])
 
     # 加重平均
     total = sum(max(0.0, float(a.get("share", 0.0))) for a in allocations)
     if total <= 0:
         cfg = BS_ORG_CONFIG[primary_dept]
-        return (cfg["indirect_per_hour"], cfg["hq_sga"], cfg["corp_sga"])
+        return (cfg["indirect_per_hour"], cfg["sga_on_propa_labor_rate"])
 
     ipt = 0.0
-    hq = 0.0
-    corp = 0.478  # BS固定
+    sga_rate = 0.0
     for a in allocations:
         dept = a.get("dept")
         share = max(0.0, float(a.get("share", 0.0))) / total
         if dept in BS_ORG_CONFIG and share > 0:
             cfg = BS_ORG_CONFIG[dept]
             ipt += cfg["indirect_per_hour"] * share
-            hq  += cfg["hq_sga"] * share
-    return (int(round(ipt)), hq, corp)
+            sga_rate += cfg["sga_on_propa_labor_rate"] * share
+    return (int(round(ipt)), sga_rate)
 
 
 def compute_direct_labor_cost(total_man_days: float, team_ratio: Dict[str, float], rank_costs: Dict[str, int]) -> int:
@@ -300,34 +305,44 @@ def compute_indirect_cost(total_man_days: float, indirect_yen_per_hour: float) -
     return int(hours * indirect_yen_per_hour)
 
 
-def calculate_profitability_bs(total_price: int, cogs: int, hq_rate: float, corp_rate: float, target_margin_input: float | None):
+# Certified FY2026 BS Standard (SGA on Direct Labor)
+def calculate_profitability_ccs(
+    total_price: int,
+    cogs: int,
+    direct_labor_cost: int,
+    sga_rate_on_labor: float,
+    target_margin_input: float | None
+):
+    # 販管費 = 直接労務費 * 販管費率
+    total_sga = int(direct_labor_cost * sga_rate_on_labor)
+    
     gross_profit = total_price - cogs
-    sga_total_rate = hq_rate + corp_rate   # 粗利に対する率
-    total_sga = int(gross_profit * sga_total_rate)
-    operating_profit = gross_profit - total_sga
+    operating_profit = total_price - cogs - total_sga
     operating_margin = (operating_profit / total_price) if total_price > 0 else 0.0
 
     suggested_price = 0
     if target_margin_input is not None:
-        # 営業利益率 τ を達成する必要売価： Sales = COGS / (1 - τ/(1-α))
-        denom_base = (1.0 - sga_total_rate)
-        if denom_base > 0:
-            denom = 1.0 - (target_margin_input / denom_base)
-            if denom > 0:
-                suggested_price = int(cogs / denom)
+        # 逆算ロジック: TargetPrice = (COGS + SGA) / (1 - TargetMargin)
+        # ガードレール: 目標利益率が100%以上なら計算不能
+        if target_margin_input < 1.0:
+            denom = 1.0 - target_margin_input
+            # SGAは固定費ではなく、この時点では未定のため、COGSとDirectLaborCostから再計算する
+            # suggested_sga = direct_labor_cost * sga_rate_on_labor (これは固定)
+            numerator = cogs + total_sga # total_sgaは売価に依存しないため固定値
+            suggested_price = int(numerator / denom)
 
     return {
         "sales": total_price,
         "cogs": cogs,
         "gross_profit": gross_profit,
+        "sga_cost": total_sga,
         "operating_profit": operating_profit,
         "operating_margin": f"{operating_margin:.1%}",
         "target_margin_specified": f"{target_margin_input:.1%}" if target_margin_input is not None else None,
         "suggested_price_to_attain_target": suggested_price,
         "breakdown": {
-            "total_sga_cost": total_sga,
-            "hq_sga_rate": f"{hq_rate:.1%}",
-            "corp_sga_rate": f"{corp_rate:.1%}",
+            "sga_calculation_base": "direct_labor_cost",
+            "sga_rate_on_propa_labor": f"{sga_rate_on_labor:.1%}",
         }
     }
 
@@ -339,12 +354,11 @@ def main_logic(req_body, tables=[]):
     config = CONFIG
 
     # 入力取得
-    method = req_body.get('method', 'screen')
     complexity = req_body.get('complexity') or 'medium'
     duration = req_body.get('duration') or 'normal'
     dev_type = req_body.get('dev_type') or 'new'
     target_platform = req_body.get('target_platform') or 'web_b2e'
-    profile_key = req_body.get('estimation_profile') or 'enterprise'
+    profile_key = req_body.get('estimation_profile') or 'enterprise' # デフォルトをenterpriseに
     target_margin = req_body.get('target_margin')  # None可（float）
 
     # 規模
@@ -377,7 +391,7 @@ def main_logic(req_body, tables=[]):
     # プロファイル
     profiles = config.get('estimation_profiles', {})
     selected_profile = profiles.get(profile_key, profiles['enterprise'])
-    prod_factor = selected_profile.get('productivity_factor', 0.075)
+    prod_factor = selected_profile.get('productivity_factor', config['fp_simplified']['default_productivity'])
 
     # ===== 工数 =====
     dev_feature_days = sum(FEATURE_MAN_DAYS.get(f, 0) for f in selected_features)
@@ -400,7 +414,7 @@ def main_logic(req_body, tables=[]):
 
     # 間接費：部門間接費単金×時間、応援PJ加重
     resolved_alloc = dept_allocation if isinstance(dept_allocation, list) else None
-    indirect_per_hour, hq_rate, corp_rate = resolve_bs_org_rates(primary_dept, resolved_alloc)
+    indirect_per_hour, sga_rate = resolve_bs_org_rates(primary_dept, resolved_alloc)
     indirect_cost = compute_indirect_cost(dev_total_days, indirect_per_hour)
 
     # Phase2：固定費（直接費に含める）
@@ -427,8 +441,14 @@ def main_logic(req_body, tables=[]):
     base_estimated_amount = cogs
     final_amount = int(base_estimated_amount * platform_multiplier * dur_multiplier * buffer_multiplier)
 
-    # ===== 損益（粗利ベースSG&A） =====
-    profit_data = calculate_profitability_bs(final_amount, cogs, hq_rate, corp_rate, target_margin)
+    # ===== 損益（CCS基準：販管費は直接労務費に賦課） =====
+    profit_data = calculate_profitability_ccs(
+        total_price=final_amount,
+        cogs=cogs,
+        direct_labor_cost=direct_labor_cost,
+        sga_rate_on_labor=sga_rate,
+        target_margin_input=target_margin
+    )
 
     return {
         "status": "success",
@@ -442,8 +462,7 @@ def main_logic(req_body, tables=[]):
         "bs_input": {
             "department": primary_dept or DEFAULT_BS_DEPT,
             "dept_allocation": resolved_alloc,
-            "hq_sga_rate_applied": f"{hq_rate:.1%}",
-            "corp_sga_rate_applied": f"{corp_rate:.1%}",
+            "sga_rate_applied": f"{sga_rate:.1%}",
             "indirect_yen_per_hour": indirect_per_hour,
             "team_ratio": team_ratio_dict,
         },
