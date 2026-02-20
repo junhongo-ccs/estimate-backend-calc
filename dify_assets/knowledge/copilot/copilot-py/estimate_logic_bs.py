@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-BS版 見積ロジック（Dify Code Node用 & Backend共通）
+BS版 見積ロジック（Dify Code Node用）
 - FY2026 利益管理表の係数に準拠（1人月=160h、部門別 間接費単金、本部/全社販管費率=BSは47.8%）
 - SG&Aは粗利ベースで控除（= 本部販管費率 + 全社販管費率）
 - 目標営業利益率からの逆算売価式も粗利ベースの定義に合わせて修正
@@ -344,7 +344,7 @@ def main_logic(req_body, tables=[]):
     duration = req_body.get('duration') or 'normal'
     dev_type = req_body.get('dev_type') or 'new'
     target_platform = req_body.get('target_platform') or 'web_b2e'
-    profile_key = req_body.get('estimation_profile') or 'enterprise'
+    profile_key = req_body.get('estimation_profile') or 'poc'
     target_margin = req_body.get('target_margin')  # None可（float）
 
     # 規模
@@ -362,21 +362,17 @@ def main_logic(req_body, tables=[]):
     selected_phase3 = resolve_keys(req_body.get('phase3_items', []), PHASE3_LABEL_MAP, PHASE3_ITEMS)
 
     # 係数
-    diff_multipliers = config.get('difficulty_multipliers', {})
-    diff_multiplier = diff_multipliers.get(complexity, 1.0)
-    dur_multipliers = config.get('duration_multipliers', {})
-    dur_multiplier  = dur_multipliers.get(duration, 1.0)
-    dev_type_mults_config = config.get('dev_type_multipliers', {})
-    current_dev_type_mults = dev_type_mults_config.get(dev_type, {"design": 1.0, "dev": 1.0})
-    dev_type_design_mult = current_dev_type_mults.get("design", 1.0)
-    dev_type_dev_mult    = current_dev_type_mults.get("dev", 1.0)
-    plat_mults_config = config.get('platform_multipliers', {})
-    platform_multiplier = plat_mults_config.get(target_platform, 1.0)
+    diff_multiplier = config.get('difficulty_multipliers', {}).get(complexity, 1.0)
+    dur_multiplier  = config.get('duration_multipliers', {}).get(duration, 1.0)
+    dev_type_mults  = config.get('dev_type_multipliers', {}).get(dev_type, {"design":1.0, "dev":1.0})
+    dev_type_design_mult = dev_type_mults.get("design", 1.0)
+    dev_type_dev_mult    = dev_type_mults.get("dev", 1.0)
+    platform_multiplier  = config.get('platform_multipliers', {}).get(target_platform, 1.0)
     buffer_multiplier    = config.get('buffer_multiplier', 1.1)
 
     # プロファイル
     profiles = config.get('estimation_profiles', {})
-    selected_profile = profiles.get(profile_key, profiles['enterprise'])
+    selected_profile = profiles.get(profile_key, profiles['poc'])
     prod_factor = selected_profile.get('productivity_factor', 0.075)
 
     # ===== 工数 =====
@@ -493,7 +489,7 @@ def main(**kwargs) -> dict:
     if not dept or dept not in BS_ORG_CONFIG:
         args['department'] = DEFAULT_BS_DEPT
 
-    # 応援配分（文字列→配列に正規化）
+    # 応援配分
     if isinstance(args.get('dept_allocation'), str):
         args['dept_allocation'] = parse_dept_allocation(args['dept_allocation'])
 

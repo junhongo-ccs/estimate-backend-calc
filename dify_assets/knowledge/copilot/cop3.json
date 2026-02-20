@@ -1,0 +1,211 @@
+了解です。**既定部門＝「ビジネスイノベーション事業部共通」**で固め、**DifyのスタートUIで“ユーザーに問いかける変数”**を、BS事業部の係数・計算思想（1人月=160h、部門別間接費単金、販管費は粗利ベース、本部27.3%＋全社47.8% 等）に整合する形で設計します。.py)
+以下は「必須」「推奨（任意）」「上級（任意・トグル）」に分けたUI変数セットと、YAMLへの落とし込み例、入力バリデーションと相互依存ロジック、出力でのエコーバック方針です。PoCコード/現行YAML構成も踏まえています。.yml).yml) [nttdatajpp...epoint.com] [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+1) 変数設計（Start画面に出す質問）
+A. 必須（できるだけ少なく・意味は明確に）
+
+
+所属部門（本部） department
+
+既定値：ビジネスイノベーション事業部共通
+目的：**部門別 間接費単金（円/時）、本部販管費率（27.3%）、全社販管費率（BS=47.8%）**を自動適用。.py) [nttdatajpp...epoint.com]
+
+
+
+開発プロファイル（生産性プロファイル） estimation_profile
+
+選択肢：poc / enterprise / mission_critical（既存のプロファイルを踏襲）
+FP→人日変換の生産性係数を決定（MD/FP）。.py) [nttdatajpp...epoint.com]
+
+
+
+対象プラットフォーム target_platform
+
+選択肢：web_b2e / web_b2c / mobile / all
+売価側のリスクプレミアム（係数）を適用。.py) [nttdatajpp...epoint.com]
+
+
+
+規模（UI画面数） screen_count（数値）
+
+FP簡易法の画面あたりFP（20FP/画面）に接続。.py) [nttdatajpp...epoint.com]
+
+
+
+主要テーブル名 tables（改行/カンマ入力）
+
+入力があればtable_countを自動算出（=行数）。1テーブル=15FPで加算。.py) [nttdatajpp...epoint.com]
+
+
+
+難易度 complexity
+
+選択肢：low / medium / high（係数：0.8/1.0/1.5 など既存）.py) [nttdatajpp...epoint.com]
+
+
+
+納期余裕 duration
+
+選択肢：long / normal / short（係数：0.9/1.0/1.2）.py) [nttdatajpp...epoint.com]
+
+
+
+
+これだけで、FP→人日、人日→直接労務費（PDFのランク人月）、間接費（部門の円/時×時間）、販管費（粗利ベース：本部＋全社）、売価（プレミアム適用） まで回せます。.py) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+
+B. 推奨（任意）（現実のブレを吸収）
+
+
+応援PJ配分 dept_allocation
+
+入力例（段落）：
+ビジネスイノベーション事業部共通: 0.6
+ＣＳ第１システム開発部: 0.4
+
+
+目的：部門横断アサインを加重平均で反映（間接費単金と本部販管費率）。実績/見込のズレ抑止に直結。.py) [nttdatajpp...epoint.com]
+
+
+
+ランクミックス team_ratio
+
+既定：Rank3:0.8, Rank2:0.2（PDFの人月単価に基づく標準チーム）.py) [nttdatajpp...epoint.com]
+目的：上流を高ランク/下流を適正ランクなど、利益感度を確認。.py) [nttdatajpp...epoint.com]
+
+
+
+Phase2項目（要件/設計/標準化 等） phase2_items
+
+
+
+既存の固定費メニューを踏襲。計上漏れ防止。.py) [nttdatajpp...epoint.com]
+
+
+Phase3項目（UI/ブランディング等） phase3_items + 見積確度 confidence
+
+
+Phase3を外注コスト扱いする既存ロジックに準拠。確度で係数を調整。.py) [nttdatajpp...epoint.com]
+
+
+目標営業利益率 target_margin
+
+
+例：10% または 0.1 入力。
+粗利ベースSG&Aに合わせた逆算売価を提示（式は後述のBS版）。.py) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+
+C. 上級（任意・トグル）（PoC拡張に向けて）
+
+直営/外注の目標比率 inhouse_ratio
+
+
+例：0.7（直営70%）。外注（請負/SES/その他）へ割付のヒントを自動出力。.py) [nttdatajpp...epoint.com]
+
+
+売価側プレミアムを内訳表示 show_premium_breakdown（ON/OFF）
+
+
+platform/duration/buffer の寄与を表示して、社内説明を容易に。.py).py) [nttdatajpp...epoint.com]
+
+
+2) YAML追加例（Startノードの変数）
+
+既存のYAMLに追記して使えます。department既定値はご指定どおり 「ビジネスイノベーション事業部共通」。.yml).yml) [nttdatajpp...epoint.com]
+
+Codeノード側の variables に department, dept_allocation, team_ratio を必ず接続してください（既存の他変数も従来通り接続）。.yml).yml).yml) [nttdatajpp...epoint.com]
+
+3) 入力整形＆バリデーション（Python側・既存ロジック拡張）
+
+
+部門のフォールバック
+primary_dept = args.get('department')
+if not primary_dept or primary_dept not in BS_ORG_CONFIG:
+    primary_dept = "ビジネスイノベーション事業部共通"  # 既定  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com/Documents/Microsoft%20Copilot%20%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%20%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB/estimate_logic%20(1).py).py).py).py).py).py).py).py).py).py).py)
+
+
+応援配分のパース（段落→辞書）
+
+# dept_allocation: "部門: 0.6\nＣＳ第１システム開発部: 0.4" → [{"dept":"...", "share":0.6}, ...]
+def parse_dept_allocation(text):
+    items = []
+    if isinstance(text, str) and text.strip():
+        for line in text.splitlines():
+            if ':' in line:
+                k, v = line.split(':', 1)
+                k = k.strip()
+                try:
+                    s = float(v.strip())
+                    if k in BS_ORG_CONFIG and s > 0:
+                        items.append({"dept": k, "share": s})
+                except:
+                    pass
+    # 正規化（合計1.0にスケーリング）
+    total = sum(i['share'] for i in items)
+    if total > 0:
+        for i in items:
+            i['share'] = i['share']/total
+    return items
+
+    合計=1.0に正規化し、間接費単金/本部販管費率を加重平均で採用。応援PJの思想に合致。.py) [nttdatajpp...epoint.com]
+
+
+
+ランクミックスのパース（Rank3:0.8, Rank2:0.2 形式）
+
+未指定なら {"Rank3":0.8, "Rank2":0.2} を採用。PDFのランク人月単価を使うロジックに接続。.py) [nttdatajpp...epoint.com]
+
+
+
+テーブル数の自動カウント（既存：tables入力があればtable_countを上書き）.py).py).py) [nttdatajpp...epoint.com]
+
+
+
+4) 損益ロジックの接続（BS準拠の式）
+
+間接費：間接費＝(総人日×8h) × 部門の間接費単金（円/h）。率ではなく単金×時間。.py) [nttdatajpp...epoint.com]
+販管費（SG&A）：粗利ベースで、**本部販管費率（27.3%）＋全社販管費率（47.8%）**を控除。.py).py) [nttdatajpp...epoint.com]
+逆算売価（目標営業利益率 τ）：
+Sales=COGS1−τ1−α(α=本部＋全社のSG&A率)\text{Sales}=\frac{\text{COGS}}{1-\frac{\tau}{1-\alpha}}
+\quad(\alpha=\text{本部＋全社のSG\&A率})Sales=1−1−ατ​COGS​(α=本部＋全社のSG&A率)
+既存コードの売上にSG&Aを掛ける式から粗利ベース式へ換装する点に注意。.py).py) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+
+5) 出力（LLMプロンプト＆可視化の工夫）
+
+**冒頭の「前提条件エコーバック」**に、
+
+department、dept_allocation（加重後）、team_ratio、screen_count/table_count/tables、estimation_profile、target_platform/dev_type/complexity/duration/confidence/target_margin をMECEに列挙（既存LLMテンプレの方針に沿う）。.yml) [nttdatajpp...epoint.com]
+
+
+**「係数の根拠」**として、
+
+1人月=160h、部門別 間接費単金、本部/全社販管費率の出典がFY2026利益管理表である旨を脚注に記載。.py) [nttdatajpp...epoint.com]
+
+
+**「感度コメント」**を自動：
+
+営業利益率<5%なら要注意（納期=shortや難易度=highが要因）と指摘、逆算売価/もしくはランクミックス変更の提案を出す（既存LLMテンプレのルール活用）。.yml).yml).yml).yml).yml) [nttdatajpp...epoint.com]
+
+
+
+
+6) すぐに入れる“最小差分”まとめ
+
+
+YAML
+
+department追加（既定＝ビジネスイノベ共通）。
+dept_allocation（段落）と team_ratio（テキスト）を追加。
+Codeノードvariablesへ3つを結線。.yml).yml).yml).yml).yml).yml) [nttdatajpp...epoint.com]
+
+
+
+Python
+
+BS_ORG_CONFIG（部門の間接費単金/販管費率）を定義。
+departmentのフォールバック＝ビジネスイノベ共通。
+dept_allocation/team_ratioのパーサを追加。
+直接労務費：PDFのランク人月単価、間接費：時間×単金、SG&A：粗利ベースに置換。
+逆算売価式をBS版へ。.py) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+

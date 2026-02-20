@@ -1,0 +1,369 @@
+本郷さん、良いテーマです。Dify上で「BS事業部限定」のAI見積もりPoCに寄せるなら、添付のPython/YAMLを以下の観点で“実態（BS準拠）”へ近づけるのが効果的です。要点→具体コード修正（差分）→UI改修（YAML）→数式の正しさ、の順でレビューします。
+
+0) いまの実装が置いている前提（差分把握）
+
+コスト係数の前提
+
+労務費：Rank1..5 の月額コストを固定値で保有（例：Rank2=1,088,000円/月など）し、20日/月 換算で直接労務費を算定。.py) [nttdatajpp...epoint.com]
+間接費：固定率 38% を直接労務費に乗算。.py) [nttdatajpp...epoint.com]
+販管費（SG&A）：「事業部18.6% + 全社9.5%」= 28.1% を売上に乗算して控除。.py) [nttdatajpp...epoint.com]
+
+
+売価見積の作り方
+
+コスト側：dev_cost = 人日 × 日額(=100,000円) + Phase2固定費 + Phase3外注費。
+売上側：上記合計にプラットフォーム係数×納期係数×バッファを売上側に掛ける（コスト側には未反映）。.py) [nttdatajpp...epoint.com]
+
+
+逆算式
+
+目標営業利益率からの必要売価は、Price = COGS / (1 - SG&A - TargetMargin) を採用。.py) [nttdatajpp...epoint.com]
+
+
+
+
+以上はいずれも「プロダクトとしてのPoC基準」としてはわかりやすい一方、BS事業部の実態（部門別の間接費単金、本部販管費率、全社販管費率=47.8%、1人月=160時間、ランク別の人月単価）と齟齬があります。.py) [nttdatajpp...epoint.com]
+
+
+1) BS限定に寄せた改善方針（要約）
+
+
+ランク別の月額コストをBS実績へ上書き
+
+PDFの基準：1人月=160h、ランク別の時間単価→人月単価（例：L4=6,860円/h→1,098千円/月）。
+既存rank_costsを入替（Rank3=944千円/月、Rank2=758千円/月、Rank1=541千円/月 など）。.py) [nttdatajpp...epoint.com]
+
+
+
+間接費は「率」ではなく“部門別の間接費単金（円/時）”で算定
+
+例：ＳＦ＆Ｍ系=2,030円/h、ＣＳ系=1,940円/h、ＤＴ系=2,320円/h、社科系=2,220円/h、ソリビ=3,570円/h、ビジネスイノベ系=2,340円/h。
+応援PJ（複数部門アサイン）に備えて配分（％）×単金の加重平均で算出。.py) [nttdatajpp...epoint.com]
+
+
+
+販管費（SG&A）の掛け先と率を修正
+
+**掛け先：粗利（=売上−売上原価）**に対して、
+**「本部販管費率（部門別）」＋「全社販管費率（BS=47.8%）」**を適用する。
+例：ＳＦ＆Ｍ本部=26.3%、ＣＳ本部=30.9%、ＤＴ本部=38.1%、社科=40.8%、ビジネスイノベ=27.3%、ソリビ=93.7%。.py) [nttdatajpp...epoint.com]
+
+
+
+逆算式の修正（“販管費は粗利ベース”に対応）
+
+目標営業利益率を τ、本部+全社販管費率合計を α、売上原価を COGS とすると、
+必要売価：
+Sales=COGS1−τ1−α\text{Sales}=\frac{\text{COGS}}{1-\frac{\tau}{1-\alpha}}Sales=1−1−ατ​COGS​
+（※営業利益＝（売上−COGS）×(1−α) を売上で割ったものが τ）
+既存式（売上にSG&A）からの論理ジレンマを解消。.py) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+
+
+UI（YAML）に“部門選択・応援PJ配分・ランクミックス・直営/外注比率”を追加
+
+入力がなければBS標準（例：Rank3:0.8 / Rank2:0.2、所属=ビジネスイノベ or 適用部門）で計算。.yml) [nttdatajpp...epoint.com]
+
+
+
+
+2) Python差分（抜粋）：BS準拠のコア修正
+
+下記は貼り替え提案です。# ← add/modify のコメントを目印にしてください。元コードは添付estimate_logic (1).py。.py) [nttdatajpp...epoint.com]
+
+2.1 定数：ランク・部門の係数をBS実態に
+# ---- NEW: BS Division constants ----
+BS_ORG_CONFIG = {
+    # 間接費単金（円/時）, 本部販管費率(%), 全社販管費率（BS=47.8% 固定）
+    "ビジ・企画営業部":          {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ビジ・システム開発部":        {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ビジネスイノベーション事業部共通": {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ営業部":            {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ第１システム開発部":    {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ第２システム開発部":    {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ事業部（共通）":       {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＣＳ営業部":               {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳ第１システム開発部":       {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳ第２システム開発部":       {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳシステム事業部（共通）":     {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＤＴ営業部":               {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ第１開発部":             {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ第２開発部":             {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ事業部（共通）":          {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "社会・科学システム営業部":       {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "データサイエンスシステム部":     {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "社会・科学システム事業部（共通）": {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "ソリューションビジネス推進室":     {"indirect_per_hour": 3570, "hq_sga": 0.937, "corp_sga": 0.478},
+}
+# 値の根拠：PDF「間接費単金」「本部販管費率」「全社販管費率=BS 47.8%」より。1人月=160hはPDF準拠。  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com).py)
+
+# ---- Replace: rank monthly costs to match PDF (人月=160h) ----
+CONFIG["profit_config"]["rank_costs"] = {
+    # PDFの時給→人月(千円)換算：L4=6,860円/h→約1,098千円/月 等
+    # ここでは既存のRank2/3/1をPDFのL2/L3/L1に合わせる（命名は既存に追随）
+    "Rank4": 1098000,  # L4: 6,860 ×160h ≒ 1,098,000円/月
+    "Rank3":  944000,  # L3: 5,900 ×160h ≒   944,000円/月
+    "Rank2":  758000,  # L2: 4,740 ×160h ≒   758,000円/月
+    "Rank1":  541000,  # L1: 3,380 ×160h ≒   541,000円/月
+    # Rank5はPDF未記載のため未使用（必要なら社内基準を別途設定）
+}
+# 既存コードのRank→月額はPDFと逆転していたため上書き。  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com/Documents/Microsoft%20Copilot%20%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%20%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB/estimate_logic%20(1).py)[1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com).py)
+
+# 標準チーム構成はそのままでも良いが、BS標準なら Rank3:0.8 / Rank2:0.2 を継続
+係数の根拠はFY2026利益管理表に掲載のランク別時給→人月換算、部門別の間接費単金/本部販管費率、全社販管費率（BS=47.8%）。.py) [nttdatajpp...epoint.com]
+
+2.2 間接費：部門×配分で加重平均（応援PJ対応）
+def resolve_bs_org_rates(primary_dept: str, allocations: list = None):
+    """
+    primary_dept: 主所属部門（YAMLの選択肢）
+    allocations: [{"dept": 部門名, "share": 0.3}, ...]  # 応援PJ配分（任意）
+    戻り値: (indirect_per_hour_weighted, hq_sga_rate_weighted, corp_sga_rate) 
+    """
+    # 入力がなければ主所属100%
+    if not allocations:
+        cfg = BS_ORG_CONFIG.get(primary_dept, None)
+        if not cfg:
+            # フォールバック：ビジネスイノベ共通
+            cfg = BS_ORG_CONFIG["ビジネスイノベーション事業部共通"]
+        return (cfg["indirect_per_hour"], cfg["hq_sga"], cfg["corp_sga"])
+    # 加重平均
+    ipt = 0.0; hq = 0.0; total = 0.0; corp = 0.478  # BS固定  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com).py)
+    for a in allocations:
+        dept = a.get("dept"); w = float(a.get("share", 0))
+        if dept in BS_ORG_CONFIG and w > 0:
+            ipt += BS_ORG_CONFIG[dept]["indirect_per_hour"] * w
+            hq  += BS_ORG_CONFIG[dept]["hq_sga"] * w
+            total += w
+    if total > 0:
+        ipt /= total; hq /= total
+    else:
+        # 異常時は主所属
+        ipt, hq, corp = resolve_bs_org_rates(primary_dept, None)
+    return (ipt, hq, corp)
+
+    応援PJはPDFでも「必ず作成」推奨。計数の実績/見込乖離を避けるため、所属基準で負担を出すのがポイントです。.py) [nttdatajpp...epoint.com]
+
+    2.3 直接労務費：月額×人月（= 1人月160h）で統一
+    def compute_direct_labor_cost(total_man_days: float, team_ratio: dict, rank_costs: dict) -> int:
+    """
+    total_man_days: 総人日（見積結果）
+    team_ratio: {"Rank3":0.8, "Rank2":0.2} 等
+    rank_costs: 月額（円）辞書
+    """
+    # 人月換算：20日/月（= 160h/8h）→既存ロジック踏襲
+    man_months = total_man_days / 20.0
+    avg_monthly_cost = sum(rank_costs.get(r, 0) * w for r, w in team_ratio.items())
+    return int(man_months * avg_monthly_cost)
+
+    既存dev_costの「人日×日額（10万円）」を置き換え、PDF準拠のランク人月に寄せます。.py)
+
+    2.4 間接費：“率”ではなく「時間×部門単金」
+
+    def compute_indirect_cost(total_man_days: float, indirect_yen_per_hour: float) -> int:
+    hours = total_man_days * 8.0  # 1日=8h
+    return int(hours * indirect_yen_per_hour)
+
+    2.5 SG&A（販管費）：粗利ベースに修正＋逆算式も修正
+
+    def calculate_profitability_bs(total_price: int, cogs: int, hq_rate: float, corp_rate: float, target_margin_input: float = None) -> dict:
+    gross_profit = total_price - cogs
+    # SG&Aは粗利ベース
+    sga_total_rate = hq_rate + corp_rate
+    total_sga = int(gross_profit * sga_total_rate)
+    operating_profit = gross_profit - total_sga
+    operating_margin = (operating_profit / total_price) if total_price > 0 else 0.0
+
+    suggested_price = 0
+    if target_margin_input is not None:
+        # 営業利益率τを達成する売価： Sales = COGS / (1 - τ/(1-α)), α=SG&A率
+        denom = 1.0 - (target_margin_input / (1.0 - sga_total_rate)) if (1.0 - sga_total_rate) > 0 else 0
+        if denom > 0:
+            suggested_price = int(cogs / denom)
+
+    return {
+        "sales": total_price,
+        "cogs": cogs,
+        "gross_profit": gross_profit,
+        "operating_profit": operating_profit,
+        "operating_margin": f"{operating_margin:.1%}",
+        "target_margin_specified": f"{target_margin_input:.1%}" if target_margin_input is not None else None,
+        "suggested_price_to_attain_target": suggested_price,
+        "breakdown": {
+            "total_sga_cost": total_sga,
+            "hq_sga_rate": f"{hq_rate:.1%}",
+            "corp_sga_rate": f"{corp_rate:.1%}",
+        }
+    }
+
+    SG&Aは粗利ベースという利益管理表の思想（本部販管費/全社販管費→粗利から控除）に合わせた式へ換装。.py) [nttdatajpp...epoint.com]
+
+    2.6 main_logic の組み立て：BS入力を受けてCOGS→売価→損益
+
+    def main_logic(req_body, tables=[]):
+    config = CONFIG
+    # 既存入力 + 追加入力
+    primary_dept = req_body.get('department')  # NEW: 主所属（YAMLで選択）
+    allocations = req_body.get('dept_allocation')  # NEW: 応援配分 [{"dept":"ＣＳ第１システム開発部","share":0.3},...]
+
+    # ...（既存のFP/難易度/プラットフォーム等はそのまま）...
+
+    # === 1) 工数計算（既存ロジック） ===
+    # dev_total_days を既存通り算出（略）
+
+    # === 2) コスト分解（BS準拠） ===
+    # 2-1) 直接労務費（ランク人月×人月）
+    rank_costs = config.get("profit_config", {}).get("rank_costs", {})
+    team_ratio = config.get("profit_config", {}).get("standard_team_ratio", {"Rank3":0.8,"Rank2":0.2})
+    direct_labor_cost = compute_direct_labor_cost(dev_total_days, team_ratio, rank_costs)
+
+    # 2-2) 間接費（部門別・応援PJ加重）
+    indirect_per_hour, hq_rate, corp_rate = resolve_bs_org_rates(primary_dept, allocations)
+    indirect_cost = compute_indirect_cost(dev_total_days, indirect_per_hour)
+
+    # 2-3) 外注費（既存: Phase3を外注とみなす）
+    outsourcing_sum = p3_final_cost
+
+    # 2-4) COGS
+    cogs = direct_labor_cost + indirect_cost + outsourcing_sum
+
+    # === 3) 売価（既存の“リスクプレミアム”は継続） ===
+    base_estimated_amount = cogs  # ※必要に応じて p2 を直接費に含める/外すをトグル化しても可
+    final_amount = int(base_estimated_amount * platform_multiplier * dur_multiplier * buffer_multiplier)
+
+    # === 4) 損益（BS準拠のSG&Aで） ===
+    profit_data = calculate_profitability_bs(final_amount, cogs, hq_rate, corp_rate, target_margin)
+
+    # 出力（追加のエコーバック）
+    return {
+        "status": "success",
+        "estimated_amount": f"¥{final_amount:,}",
+        "estimated_range": f"¥{int(final_amount*0.9):,} - ¥{int(final_amount*1.2):,}",
+        "man_days": {
+            "development_total": round(dev_total_days, 1),
+            "fp_based": round(dev_fp_based_days, 1),
+            "feature_based": round(dev_feature_days, 1)
+        },
+        "bs_input": {
+            "department": primary_dept,
+            "dept_allocation": allocations,
+            "hq_sga_rate_applied": f"{hq_rate:.1%}",
+            "corp_sga_rate_applied": f"{corp_rate:.1%}",
+            "indirect_yen_per_hour": indirect_per_hour,
+            "team_ratio": team_ratio
+        },
+        "profit_analysis": profit_data,
+        "productivity": f"{prod_factor} MD/FP"
+    }
+    こうすることで、見積額（売価）はCOGS×プレミアムの素直な形に、損益はBSの販管費ルールで下がる形に揃います。.py) [nttdatajpp...epoint.com]
+
+    3) YAML（Difyワークフロー）：UI入力の増設（BS前提）
+
+既存の開発見積もりサポーターPoC (1).ymlのStartノードに以下変数を追加。.yml) [nttdatajpp...epoint.com]
+
+- default: ビジネスイノベーション事業部共通
+  label: 【BS】所属部門（本部）
+  type: select
+  required: true
+  variable: department
+  options:
+    - ビジ・企画営業部
+    - ビジ・システム開発部
+    - ビジネスイノベーション事業部共通
+    - ＳＦ＆Ｍ営業部
+    - ＳＦ＆Ｍ第１システム開発部
+    - ＳＦ＆Ｍ第２システム開発部
+    - ＳＦ＆Ｍ事業部（共通）
+    - ＣＳ営業部
+    - ＣＳ第１システム開発部
+    - ＣＳ第２システム開発部
+    - ＣＳシステム事業部（共通）
+    - ＤＴ営業部
+    - ＤＴ第１開発部
+    - ＤＴ第２開発部
+    - ＤＴ事業部（共通）
+    - 社会・科学システム営業部
+    - データサイエンスシステム部
+    - 社会・科学システム事業部（共通）
+    - ソリューションビジネス推進室
+
+- default: |
+    例)
+    ＣＳ第１システム開発部: 0.5
+    ＳＦ＆Ｍ第１システム開発部: 0.5
+  label: 【任意】応援PJ配分（部門: 割合）
+  type: paragraph
+  required: false
+  variable: dept_allocation
+
+- default: Rank3:0.8, Rank2:0.2
+  label: 【任意】ランクミックス（Rank:比率）
+  type: text-input
+  required: false
+  variable: team_ratio
+
+  Codeノードへの入力連携（variables）に department / dept_allocation / team_ratio を接続してください。既存のfeatures/table/screen_count/... は流用でOK。.yml) [nttdatajpp...epoint.com]
+
+
+4) 数式・パラメータの“正しさ”の根拠（抜粋）
+
+1人月=160時間、**ランク別単価（例：L4=6,860円/h→1,098千円/月）**は利益管理表の定義に準拠。.py) [nttdatajpp...epoint.com]
+間接費は「部門別の間接費単金（円/時）」×直接稼働時間で算出（固定率ではない）。.py) [nttdatajpp...epoint.com]
+販管費は粗利ベースで、**本部販管費率（部門別）＋全社販管費率（BS=47.8%）**を控除。.py) [nttdatajpp...epoint.com]
+応援PJの必要性（所属基準での計数一致）：非推奨パターンは実績/見込のズレが出るため、応援PJ作成が推奨。.py) [nttdatajpp...epoint.com]
+既存PoCのロジック構成・パラメータは上記Python/YAMLの通り（差分の前状態）。.yml) [nttdatajpp...epoint.com], [nttdatajpp...epoint.com]
+
+
+5) “意思決定”に効く追加提案（任意実装）
+
+外注の区分（請負/SES/その他）
+
+
+PDFの内訳（請負委託費/SES委託費/その他）に合わせ、outsourcing を区分×単価×人日に分解。感度分析がやりやすくなります。.py) [nttdatajpp...epoint.com]
+
+
+直営比率の表示
+
+
+直営＝直接労務費 / (直接労務費+外注) として直営比率を出力し、社内KPIに合わせた評価コメントを自動付与。.py) [nttdatajpp...epoint.com]
+
+
+“間接費を見積額に内包”オプション
+
+
+いまは売価側プレミアムのみ。見積額に間接費を内包するトグルを設け、案件特性で使い分けられるように。
+
+
+目標粗利・営業利益の2軸逆算
+
+
+目標営業利益率に加え、目標粗利額からの必要売価/必要コストダウンを同時提示。営業判断を加速します。
+
+
+6) 最小テスト（サニティ）
+
+入力：
+
+部門＝ＣＳ第１システム開発部（hq=30.9%、corp=47.8%、間接=1,940円/h）.py) [nttdatajpp...epoint.com]
+ランクミックス＝Rank3:0.8, Rank2:0.2（L3=944千円、L2=758千円）.py) [nttdatajpp...epoint.com]
+工数=50人日、Phase2=なし、Phase3=なし、プラットフォーム=web_b2e、納期=normal、バッファ=1.1（既存）.py) [nttdatajpp...epoint.com]
+
+
+期待：
+
+直接労務費 ≒ (50/20=2.5人月) × (0.8×944k+0.2×758k) ≒ 2.5×(905.6k) ≒ 2,264k
+間接費 ≒ 50×8h×1,940円 ≒ 776k
+COGS ≒ 3,040k → 売価 ≒ 3,040k×1.1 ≒ 3,344k（簡易）
+SG&A（粗利ベース）：粗利=3,344-3,040=304k に (30.9%+47.8%=78.7%) を控除 → 営業利益 ≒ 65k、営業利益率 ≒ 1.9%
+→ 十分に薄いため、UIで**目標営業利益率（例：10%）**を設定し、逆算価格を提示する。
+※数値は丸め有り。式は上記修正ロジックに整合。
+
+
+
+
+7) まとめ（改善効果）
+
+原価（直接+間接）がBSの部門実態に準拠。
+販管費（本部+全社）は粗利ベースで控除＝利益管理表の世界観と一致。
+応援PJの加重計算で見込/実績のズレを抑止。
+UIに「所属」「応援配分」「ランクミックス」を加え、価格交渉の根拠が説明可能に。
+→ 受注判定や社内合意に耐えるPoCBSへ。

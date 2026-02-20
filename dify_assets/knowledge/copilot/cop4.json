@@ -1,0 +1,103 @@
+BS事業部向けの「部門 → 間接費単金／本部販管費率／全社販管費率」マップを、そのまま Pythonの定数 BS_ORG_CONFIG として貼り付けられる形でご用意しました。
+（※係数はすべて FY2026 利益管理表 の「部門別 間接費単金（円/時）」「本部販管費率（%）」「全社販管費率（BS=47.8%）」に準拠。1人月=160h 前提は同資料の定義です。）.py) [nttdatajpp...epoint.com]
+
+使い方の想定
+
+indirect_per_hour：間接費単金（円/時）→ 総人日×8h×間接費単金 で間接費を算定
+hq_sga：本部販管費率（粗利ベース）
+corp_sga：全社販管費率（粗利ベース、**BSは47.8%**で固定）.py
+
+Python 定義（貼り付け可）
+
+# BS事業部 各部門の「間接費単金（円/時）」「本部販管費率」「全社販管費率」
+# 出典：FY2026 利益管理表（BS系：本部販管費率 / 全社販管費率=47.8%）  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com/Documents/Microsoft%20Copilot%20%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%20%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB/estimate_logic%20(1).py).py)
+
+BS_ORG_CONFIG = {
+    # --- ビジネスイノベーション（軽めで汎用） ---
+    "ビジ・企画営業部":              {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ビジ・システム開発部":            {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+    "ビジネスイノベーション事業部共通": {"indirect_per_hour": 2340, "hq_sga": 0.273, "corp_sga": 0.478},
+
+    # --- SF&M（やや軽め） ---
+    "ＳＦ＆Ｍ営業部":                {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ第１システム開発部":        {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ第２システム開発部":        {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+    "ＳＦ＆Ｍ事業部（共通）":           {"indirect_per_hour": 2030, "hq_sga": 0.263, "corp_sga": 0.478},
+
+    # --- CS（比較的軽め） ---
+    "ＣＳ営業部":                   {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳ第１システム開発部":           {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳ第２システム開発部":           {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+    "ＣＳシステム事業部（共通）":         {"indirect_per_hour": 1940, "hq_sga": 0.309, "corp_sga": 0.478},
+
+    # --- DT（中庸〜やや重め） ---
+    "ＤＴ営業部":                   {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ第１開発部":                 {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ第２開発部":                 {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+    "ＤＴ事業部（共通）":              {"indirect_per_hour": 2320, "hq_sga": 0.381, "corp_sga": 0.478},
+
+    # --- 社会・科学システム（やや重め） ---
+    "社会・科学システム営業部":           {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "データサイエンスシステム部":         {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+    "社会・科学システム事業部（共通）":     {"indirect_per_hour": 2220, "hq_sga": 0.408, "corp_sga": 0.478},
+
+    # --- ソリューションビジネス推進室（最も重い部類） ---
+    "ソリューションビジネス推進室":         {"indirect_per_hour": 3570, "hq_sga": 0.937, "corp_sga": 0.478},
+}
+
+ここに挙げたのは BS事業部の代表部門（利益管理表に記載の部門）です。全て 本部販管費率（hq_sga） は同資料の値を小数（率）に直して格納し、全社販管費率（corp_sga） は BS=47.8% を一律に設定しています。.py) [nttdatajpp...epoint.com]
+
+併せて入れておくと便利なユーティリティ（任意）
+1) 未指定・未知部門のフォールバック
+
+DEFAULT_BS_DEPT = "ビジネスイノベーション事業部共通"  # 既定の主所属  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com/Documents/Microsoft%20Copilot%20%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%20%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB/estimate_logic%20(1).py).py).py).py)
+
+def get_bs_org_params(dept: str):
+    """部門名→(間接費単金, 本部率, 全社率)。未知/未指定はビジネスイノベ共通にフォールバック。"""
+    if not dept or dept not in BS_ORG_CONFIG:
+        dept = DEFAULT_BS_DEPT
+    cfg = BS_ORG_CONFIG[dept]
+    return cfg["indirect_per_hour"], cfg["hq_sga"], cfg["corp_sga"sga"]
+
+    2) 応援PJ（部門配分）の加重平均
+
+    def weighted_bs_params(primary_dept: str, allocations: list | None):
+    """
+    allocations: [{"dept": "ＣＳ第１システム開発部", "share": 0.4}, {"dept":"ビジネスイノベーション事業部共通","share":0.6}]
+    合計が1.0でない場合は内部で正規化する前提で設計しておくと安全。
+    """
+
+{    # デフォルト=主所属100%
+    if not allocations:
+        return get_bs_org_params(primary_dept)
+
+    # 正規化
+    total = sum(max(0.0, float(a.get("share", 0.0))) for a in allocations)
+    if total <= 0:
+        return get_bs_org_params(primary_dept)
+
+    ipt = 0.0
+    hq = 0.0
+    corp = 0.478  # BSの全社販管費率は固定  [1](https://nttdatajpprod-my.sharepoint.com/personal/hongouj_ccs_jp_nttdata_com/Documents/Microsoft%20Copilot%20%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%20%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB/estimate_logic%20(1).py).py).py).py)
+    for a in allocations:
+        dept = a.get("dept")
+        share = max(0.0, float(a.get("share", 0.0))) / total
+        if dept in BS_ORG_CONFIG and share > 0:
+            cfg = BS_ORG_CONFIG[dept]
+            ipt += cfg["indirect_per_hour"] * share
+are
+            hq  += cfg["hq_sga"] * share
+    return int(round(ipt)), hq, corp
+
+
+}
+  """
+次アクション
+
+すぐ組み込めるようであれば、上記 BS_ORG_CONFIG を PoCコードに貼り付け、department 入力と dept_allocation（任意）を使って
+
+間接費＝（総人日×8h）×indirect_per_hour
+販管費（SG&A）＝粗利×（hq_sga + corp_sga）
+へ差し替えてください。.py) [nttdatajpp...epoint.com]
+
+  """
