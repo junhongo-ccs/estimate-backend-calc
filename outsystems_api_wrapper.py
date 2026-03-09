@@ -16,8 +16,27 @@ from estimate_logic import main as dify_main
 app = FastAPI(title="AI Estimation API for OutSystems")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+
+def _normalize_model_name(model: str) -> str:
+    value = (model or "").strip()
+    if value.startswith("models/"):
+        value = value[len("models/") :]
+    return value
+
+
+def _build_gemini_endpoint(model: str) -> str:
+    normalized = _normalize_model_name(model)
+    return f"https://generativelanguage.googleapis.com/v1beta/models/{normalized}:generateContent"
+
+
+def _parse_api_error_detail(detail: str) -> str:
+    try:
+        data = json.loads(detail)
+        return data.get("error", {}).get("message", detail)
+    except Exception:
+        return detail
 
 class EstimationRequest(BaseModel):
     screen_count: int = 0
@@ -78,18 +97,38 @@ def generate_report_with_gemini(request: ReportRequest) -> str:
     }
 
     data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        GEMINI_ENDPOINT + f"?key={GEMINI_API_KEY}",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode("utf-8")
-        raise RuntimeError(f"Gemini API error: {detail}") from e
+
+    primary_model = _normalize_model_name(GEMINI_MODEL)
+    fallback_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    model_candidates = [primary_model] + [m for m in fallback_models if m != primary_model]
+    last_error = None
+
+    for model in model_candidates:
+        req = urllib.request.Request(
+            _build_gemini_endpoint(model) + f"?key={GEMINI_API_KEY}",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+                break
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode("utf-8")
+            message = _parse_api_error_detail(detail)
+            # モデル未対応時のみ次候補へフォールバック
+            if e.code == 404:
+                last_error = f"{model}: {message}"
+                continue
+            raise RuntimeError(f"Gemini API error: {message}") from e
+        except Exception as e:
+            raise RuntimeError(f"Gemini API request failed: {str(e)}") from e
+    else:
+        raise RuntimeError(
+            "No available Gemini model for generateContent. "
+            f"Tried: {', '.join(model_candidates)}. Last error: {last_error or 'unknown'}"
+        )
 
     candidates = body.get("candidates", [])
     if not candidates:
