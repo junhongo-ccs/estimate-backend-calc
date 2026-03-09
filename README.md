@@ -1,7 +1,11 @@
 # estimate-backend-calc
 
+> [!IMPORTANT]
+> **現在、Azure Functions へのデプロイは一時停止（2026年3月〜）しています。**
+> 本リポジトリの計算ロジック（`estimate_logic.py`）は、[Dify Cloud](https://dify.ai/) 上の Python Tool へポートして利用しています。
+
 AI見積もりシステムの **計算API層** です。  
-Azure AI Agent からツールとして呼び出され、YAML設定に基づく確定計算を提供します。
+Azure AI Agent からツールとして呼び出され、YAML設定に基づく確定計算を提供することを目的としています（現在は Dify での運用が主です）。
 
 ## 🚀 特徴
 
