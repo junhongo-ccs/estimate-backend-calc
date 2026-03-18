@@ -58,6 +58,11 @@ As of 2026-03-18:
   - `codex/odc-dropdown-transfer`
 - Repository handoff path:
   - `OML/AI Estimation System.oml`
+- Later verification showed that Mac cannot reliably open/use that `.oml` handoff path for this task.
+- Therefore, the practical resume strategy is now:
+  - do all future ODC work on Mac only
+  - treat the Windows OML as historical evidence of the attempted configuration
+  - reproduce the dropdown changes directly in the Mac-hosted ODC app by following the documented steps
 
 ## What Works
 
@@ -87,7 +92,7 @@ As of 2026-03-18:
 - user can type `table_count`
 - user can now change `department`
 - current screen includes:
-  - local OML now contains a `Department` dropdown implementation
+  - the last confirmed server-side screen still needs the `Department` dropdown re-applied on Mac
   - `Screen Count` input
   - `Table Count` input
   - `Run Estimate` button
@@ -175,19 +180,19 @@ In ODC:
    - `department`
    - `screen_count`
    - `table_count`
-3. Open the latest `.oml` that already contains the dropdown implementation
-4. Publish that version from Mac ODC Studio
-5. Verify in the browser that:
+3. On Mac ODC Studio, open the current app/server version of `EstimateForm`
+4. Re-apply the `Department` dropdown using the exact reproduction steps in `docs/odc_notes.md`
+5. Publish from Mac ODC Studio
+6. Verify in the browser that:
    - `Department` renders as a dropdown
    - formal department names are shown
    - selecting a department still updates the backend result correctly
-6. Only after publish is verified, continue expanding additional business inputs
+7. Only after publish is verified, continue expanding additional business inputs
 
 ## Success Condition For The Next Session
 
 The next milestone is complete when:
 
-- the latest `.oml` version is published to the personal ODC environment
 - the user can choose from formal department names in a dropdown
 - the backend receives the exact formal value
 - the displayed result still updates correctly
@@ -196,17 +201,16 @@ The next milestone is complete when:
 
 If work resumes in a new session, start from:
 
-1. Check out branch `codex/odc-dropdown-transfer`
-2. Open `OML/AI Estimation System.oml`
-3. In Mac ODC Studio, confirm `EstimateForm` still contains:
-   - `Dropdown1`
-   - `GetDepartmentMasters`
-4. Publish from Mac
-5. Verify browser behavior for:
+1. Read `docs/odc_notes.md` first for the exact dropdown reproduction steps
+2. On Mac ODC Studio, open the current app version of `EstimateForm`
+3. Recreate the `Department` dropdown directly in the app
+4. Keep the existing `DoTestCalculate` / `GetCalculateSimpleGet` flow intact
+5. Publish from Mac
+6. Verify browser behavior for:
    - `Department`
    - `Screen Count`
    - `Table Count`
-6. Keep `DoTestCalculate` intact and do not revert to free-text department input
+7. Do not revert to free-text department input
 
 ## Source Files
 

@@ -154,6 +154,160 @@ Preferred next state:
 - the dropdown should expose formal department names only
 - do not go back to free text
 
+## Department Dropdown Reproduction Guide
+
+Use this section if you need to recreate the dropdown on Mac from the current server-side app state without trusting the Windows-local OML.
+
+### Goal
+
+Replace the temporary `Department` radio selector with a proper dropdown while preserving the already-working backend call path.
+
+### Do Not Change
+
+- Do not change `DoTestCalculate`
+- Do not change the `GetCalculateSimpleGet` action flow structure
+- Do not revert to free-text department input
+- Do not switch the backend route away from `GetCalculateSimpleGet`
+- Do not change the existing bindings for:
+  - `Client.Department`
+  - `Client.ScreenCount`
+  - `Client.TableCount`
+
+### Final Intended Dropdown Wiring
+
+The final widget wiring should be:
+
+- `Dropdown1.Variable = Client.Department`
+- `Dropdown1.List = GetDepartmentMasters.List`
+- `Dropdown1.Options Text = DepartmentMaster.DisplayName`
+- `Dropdown1.Options Value = DepartmentMaster.DisplayName`
+
+### Final Intended Aggregate Wiring
+
+Create a screen aggregate named:
+
+- `GetDepartmentMasters`
+
+Configure it as:
+
+- Source:
+  - `DepartmentMaster`
+- Filter:
+  - `DepartmentMaster.Is_Active = True`
+- Sorting:
+  - `DepartmentMaster.Order (ASC)`
+
+### Why DisplayName Must Be Used As The Value
+
+The backend currently expects the formal department name string in the query parameter:
+
+- `department`
+
+Therefore, the dropdown must send:
+
+- `DepartmentMaster.DisplayName`
+
+Do not send:
+
+- `DepartmentMaster.Id`
+
+If you send the ID, the backend request will no longer match the current contract.
+
+### Actual Working Reconstruction Sequence
+
+Follow this sequence exactly.
+
+1. Open `EstimateForm` in the `Interface` tab.
+2. Find the current temporary `Radio Group` used for `Department`.
+3. Confirm it is bound to:
+   - `Client.Department`
+4. Add a new `Dropdown` near the current department selector.
+5. Set the dropdown `Variable` to:
+   - `Client.Department`
+6. Do not delete the old radio group yet.
+7. Create a new screen aggregate under `EstimateForm`:
+   - `GetDepartmentMasters`
+8. Add `DepartmentMaster` as the source.
+9. Add the filter:
+   - `DepartmentMaster.Is_Active = True`
+10. Add sorting:
+   - `DepartmentMaster.Order (ASC)`
+11. Return to the new dropdown.
+12. Set:
+   - `List = GetDepartmentMasters.List`
+13. For `Options Text`, choose:
+   - `DepartmentMaster.DisplayName`
+14. For `Options Value`, choose:
+   - `DepartmentMaster.DisplayName`
+15. Only after the dropdown is fully wired, remove or hide the temporary radio group if the environment allows it.
+
+### Failed Approach That Looked Promising But Should Be Avoided
+
+This was tried and should not be the primary route:
+
+- creating a local variable like `DepartmentOptions`
+- making it a text list
+- trying to bind the dropdown directly to that text list
+
+Why this was abandoned:
+
+- the dropdown did not reliably expose the expected text-field suggestions
+- ODC behaved as if it wanted record attributes, not a simple text list
+
+If you start seeing empty or missing suggestions for `Options Text` / `Options Value`, switch to the aggregate approach above.
+
+### What You Should Expect To See In ODC
+
+When the aggregate is wired correctly, the dropdown suggestion list should include:
+
+- `DepartmentMaster.Id`
+- `DepartmentMaster.Label`
+- `DepartmentMaster.Order`
+- `DepartmentMaster.Is_Active`
+- `DepartmentMaster.DisplayName`
+
+At that point:
+
+- choose `DepartmentMaster.DisplayName` for both display and value
+
+### Preview / Permission Noise That Is Not The Main Problem
+
+During the Windows attempt, the aggregate preview showed:
+
+- `403 - Forbidden`
+
+That preview failure did not mean the aggregate definition itself was wrong.
+Treat preview failure separately from actual screen wiring.
+
+### Publish / Environment Notes
+
+Windows ODC Studio reached save/upload but failed on publish with:
+
+- `Your current role doesn't allow you to perform this action in this app. (Forbidden)`
+
+Do not spend more time trying to recover the Windows publish path.
+Current operating assumption:
+
+- Windows ODC Studio is not trusted for future ODC work on this task
+- all future ODC work should be done on Mac
+
+### If Rebuilding From Scratch On Mac
+
+The success checklist is:
+
+1. `EstimateForm` still shows:
+   - `Screen Count`
+   - `Table Count`
+   - `Run Estimate`
+2. `DoTestCalculate` still calls:
+   - `GetCalculateSimpleGet`
+3. `Department` is a dropdown, not radio or free text
+4. Dropdown value is the formal department name
+5. Browser verification still works for:
+   - department change
+   - screen count change
+   - table count change
+
 ## Communication Preference
 
 When resuming work, use:
