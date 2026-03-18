@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import json
@@ -17,6 +18,27 @@ app = FastAPI(title="AI Estimation API for OutSystems")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+DEFAULT_TEST_REQUEST = {
+    "screen_count": 12,
+    "table_count": 4,
+    "estimation_profile": "enterprise",
+    "department": "ビジネスイノベーション事業部共通",
+    "complexity": "medium",
+    "duration": "normal",
+    "dev_type": "new",
+    "target_platform": "web_b2e",
+    "features": ["auth", "admin_dashboard"],
+    "phase2_items": ["basic_design"],
+    "phase3_items": [],
+    "target_margin": 0.2,
+}
+
+
+def _utf8_json_response(payload: Any) -> JSONResponse:
+    return JSONResponse(
+        content=payload,
+        media_type="application/json; charset=utf-8",
+    )
 
 
 def _normalize_model_name(model: str) -> str:
@@ -56,6 +78,12 @@ class EstimationRequest(BaseModel):
     dept_allocation: Optional[List[Dict[str, Any]]] = None
     team_ratio: Optional[Dict[str, float]] = None
     target_margin: Optional[float] = None
+
+
+class SimpleEstimationRequest(BaseModel):
+    screen_count: int = DEFAULT_TEST_REQUEST["screen_count"]
+    table_count: int = DEFAULT_TEST_REQUEST["table_count"]
+    department: str = DEFAULT_TEST_REQUEST["department"]
 
 
 class ReportRequest(BaseModel):
@@ -146,16 +174,111 @@ async def calculate(request: EstimationRequest):
         req_data = request.dict()
         if not req_data.get("estimation_profile") and req_data.get("profile"):
             req_data["estimation_profile"] = req_data["profile"]
+        
         result = dify_main(**req_data)
-        if isinstance(result, dict) and "result" in result:
-            return json.loads(result["result"])
-        return result
+        
+        # 不要なラップを剥がすロジック
+        while isinstance(result, dict) and len(result) == 1:
+            key = list(result.keys())[0]
+            if key in ["result", "calc_json"]:
+                val = result[key]
+                if isinstance(val, str):
+                    try:
+                        result = json.loads(val)
+                    except json.JSONDecodeError:
+                        break
+                else:
+                    result = val
+            else:
+                break
+                
+        return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return _utf8_json_response({"status": "ok"})
+
+
+@app.get("/calculate_test")
+async def calculate_test():
+    try:
+        result = dify_main(**DEFAULT_TEST_REQUEST)
+        while isinstance(result, dict) and len(result) == 1:
+            key = list(result.keys())[0]
+            if key in ["result", "calc_json"]:
+                val = result[key]
+                if isinstance(val, str):
+                    try:
+                        result = json.loads(val)
+                    except json.JSONDecodeError:
+                        break
+                else:
+                    result = val
+            else:
+                break
+        return _utf8_json_response(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/calculate_simple")
+async def calculate_simple(request: SimpleEstimationRequest):
+    try:
+        req_data = dict(DEFAULT_TEST_REQUEST)
+        req_data["screen_count"] = request.screen_count
+        req_data["table_count"] = request.table_count
+        req_data["department"] = request.department
+
+        result = dify_main(**req_data)
+        while isinstance(result, dict) and len(result) == 1:
+            key = list(result.keys())[0]
+            if key in ["result", "calc_json"]:
+                val = result[key]
+                if isinstance(val, str):
+                    try:
+                        result = json.loads(val)
+                    except json.JSONDecodeError:
+                        break
+                else:
+                    result = val
+            else:
+                break
+        return _utf8_json_response(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/calculate_simple_get")
+async def calculate_simple_get(
+    screen_count: int = Query(DEFAULT_TEST_REQUEST["screen_count"]),
+    table_count: int = Query(DEFAULT_TEST_REQUEST["table_count"]),
+    department: str = Query(DEFAULT_TEST_REQUEST["department"]),
+):
+    try:
+        req_data = dict(DEFAULT_TEST_REQUEST)
+        req_data["screen_count"] = screen_count
+        req_data["table_count"] = table_count
+        req_data["department"] = department
+
+        result = dify_main(**req_data)
+        while isinstance(result, dict) and len(result) == 1:
+            key = list(result.keys())[0]
+            if key in ["result", "calc_json"]:
+                val = result[key]
+                if isinstance(val, str):
+                    try:
+                        result = json.loads(val)
+                    except json.JSONDecodeError:
+                        break
+                else:
+                    result = val
+            else:
+                break
+        return _utf8_json_response(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/report")
@@ -169,7 +292,7 @@ async def report(request: ReportRequest):
                 response["report_html"] = markdown.markdown(report_text)
             except Exception:
                 response["report_html"] = f"<pre>{html.escape(report_text)}</pre>"
-        return response
+        return _utf8_json_response(response)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

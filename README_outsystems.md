@@ -24,6 +24,13 @@ python3 outsystems_api_wrapper.py
 - **Endpoint**: `http://<your-server-ip>:8000/calculate`
 - **Report Endpoint**: `http://<your-server-ip>:8000/report`
 
+Production (Railway):
+- **Base URL**: `https://estimate-backend-calc-production.up.railway.app`
+- **Calculate**: `POST https://estimate-backend-calc-production.up.railway.app/calculate`
+- **Calculate Simple**: `POST https://estimate-backend-calc-production.up.railway.app/calculate_simple`
+- **Calculate Test**: `GET https://estimate-backend-calc-production.up.railway.app/calculate_test`
+- **Report**: `POST https://estimate-backend-calc-production.up.railway.app/report`
+
 ---
 
 ## 3. Request/Response Overview
@@ -68,7 +75,40 @@ Example:
 ```
 
 ### Response
-The API returns a JSON object with `estimated_amount`, `man_days`, `profit_analysis`, and a full `input_echo` block.
+Local wrapper returns a JSON object with `estimated_amount`, `man_days`, `profit_analysis`, and a full `input_echo` block.
+
+Current Railway deployment note:
+- `/calculate` currently returns `{"calc_json":"..."}` in production.
+- OutSystems should deserialize `calc_json` into the final response Structure before binding fields.
+
+### Day 1 Shortcut
+If ODC request-structure binding becomes a blocker, use:
+
+- `GET /calculate_test`
+
+This endpoint runs a fixed, known-good sample request on the backend and returns the calculated result directly. It is intended only for Day 1 end-to-end verification in ODC.
+
+### Day 2 Shortcut
+To move from fixed output to input-driven output with minimal ODC mapping, use:
+
+- `POST /calculate_simple`
+
+This endpoint accepts only:
+
+- `screen_count`
+- `table_count`
+
+All other parameters reuse the known-good backend defaults from `calculate_test`.
+
+Example:
+
+```json
+{
+  "screen_count": 18,
+  "table_count": 6
+}
+```
+
 
 ### Report Generation (Optional)
 To generate a natural language report, call `POST /report` with:
@@ -99,9 +139,11 @@ See `outsystems_json_schemas.md` for the Request/Response schemas (including `/r
     *   Right-click and select **Consume REST API** -> **Add Single Method**.
 3.  **Configure API**:
     *   **Method**: `POST`
-    *   **URL**: `http://<your-server-ip>:8000/calculate`
+    *   **URL**: `https://estimate-backend-calc-production.up.railway.app/calculate`
 4.  **Define Data Structures**:
-    *   Use the example request and response fields in this guide to create the Request and Response Structures.
+    *   Create a thin response Structure first for the production wrapper:
+        * `CalculateRawResponse.calc_json` (Text)
+    *   Then deserialize `calc_json` into the final `EstimateResponse` Structure.
 5.  **Test the Connection**:
     *   Use the **Test** tab in the REST Method configuration to verify the connection to your local Python server.
 
@@ -122,7 +164,7 @@ Repeat the REST integration steps for `/report`.
     *   **Logic** -> **Integrations** -> **REST** -> **Consume REST API** -> **Add Single Method**
 2.  **Configure API**:
     *   **Method**: `POST`
-    *   **URL**: `http://<your-server-ip>:8000/report`
+    *   **URL**: `https://estimate-backend-calc-production.up.railway.app/report`
 3.  **Define Structures**:
     *   Use `ReportRequest` and `ReportResponse` schemas in `outsystems_json_schemas.md`.
 4.  **Test**:
