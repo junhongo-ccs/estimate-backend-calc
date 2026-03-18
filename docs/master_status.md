@@ -12,7 +12,7 @@ The immediate goal is not full parity yet. The immediate goal is stable ODC-to-b
 
 ## Current State
 
-As of 2026-03-17:
+As of 2026-03-18:
 
 - Railway backend is live and reachable.
 - ODC can call the backend successfully.
@@ -37,12 +37,27 @@ As of 2026-03-17:
   - `screen_count = 4`
   - `table_count = 7`
   - result changes from the previous default-department case
-- The current UI state uses a temporary `Radio Group` for `Department` with a few fixed choices.
-- That radio-based solution works as a PoC, but it is not the desired final UI because the real number of departments is 10+.
-- The agreed next UI direction is:
-  - replace the temporary radio group
-  - move `Department` to a proper `Dropdown`
-  - keep formal department names as the selectable values
+- On Windows ODC Studio, `EstimateForm` was updated locally so `Department` now uses a proper `Dropdown`.
+- That dropdown is wired as:
+  - `Dropdown1.Variable = Client.Department`
+  - `Dropdown1.List = GetDepartmentMasters.List`
+  - `Options Text = DepartmentMaster.DisplayName`
+  - `Options Value = DepartmentMaster.DisplayName`
+- `GetDepartmentMasters` was added on the screen side with:
+  - source: `DepartmentMaster`
+  - filter: `DepartmentMaster.Is_Active = True`
+  - sorting: `DepartmentMaster.Order (ASC)`
+- The old temporary radio-based department selector is no longer the target direction.
+- However, the updated ODC screen has not yet been published successfully from Windows.
+- `1-Click Publish` on Windows ODC Studio reaches save/upload but ends with:
+  - `Your current role doesn't allow you to perform this action in this app. (Forbidden)`
+- Browser access to the personal ODC environment still works, and Mac ODC Studio does not show the same behavior.
+- The latest working local artifact was exported/saved as:
+  - `C:\Users\hongouj\OneDrive - NTT DATA\ドキュメント\OSML\AI Estimation System.oml`
+- That `.oml` was then copied into this repository for handoff on branch:
+  - `codex/odc-dropdown-transfer`
+- Repository handoff path:
+  - `OML/AI Estimation System.oml`
 
 ## What Works
 
@@ -72,7 +87,7 @@ As of 2026-03-17:
 - user can type `table_count`
 - user can now change `department`
 - current screen includes:
-  - temporary `Department` selector
+  - local OML now contains a `Department` dropdown implementation
   - `Screen Count` input
   - `Table Count` input
   - `Run Estimate` button
@@ -160,16 +175,19 @@ In ODC:
    - `department`
    - `screen_count`
    - `table_count`
-3. Replace the temporary `Department` radio group with a proper `Dropdown`
-4. Populate that dropdown with the formal department names used by the backend
-5. Expand additional business inputs only after the department selector is stabilized
+3. Open the latest `.oml` that already contains the dropdown implementation
+4. Publish that version from Mac ODC Studio
+5. Verify in the browser that:
+   - `Department` renders as a dropdown
+   - formal department names are shown
+   - selecting a department still updates the backend result correctly
+6. Only after publish is verified, continue expanding additional business inputs
 
 ## Success Condition For The Next Session
 
 The next milestone is complete when:
 
-- `Department` is no longer free text
-- `Department` is no longer represented by a temporary radio group
+- the latest `.oml` version is published to the personal ODC environment
 - the user can choose from formal department names in a dropdown
 - the backend receives the exact formal value
 - the displayed result still updates correctly
@@ -178,14 +196,17 @@ The next milestone is complete when:
 
 If work resumes in a new session, start from:
 
-1. Open `EstimateForm` in ODC
-2. Confirm the current browser still updates when changing:
+1. Check out branch `codex/odc-dropdown-transfer`
+2. Open `OML/AI Estimation System.oml`
+3. In Mac ODC Studio, confirm `EstimateForm` still contains:
+   - `Dropdown1`
+   - `GetDepartmentMasters`
+4. Publish from Mac
+5. Verify browser behavior for:
    - `Department`
    - `Screen Count`
    - `Table Count`
-3. Keep the current `DoTestCalculate` flow intact
-4. Replace the temporary `Department` radio selector with a dropdown
-5. Use formal department names only; do not go back to free-text department input
+6. Keep `DoTestCalculate` intact and do not revert to free-text department input
 
 ## Source Files
 
