@@ -12,7 +12,7 @@ The immediate goal is not full parity yet. The immediate goal is stable ODC-to-b
 
 ## Current State
 
-As of 2026-03-18:
+As of 2026-03-19:
 
 - Railway backend is live and reachable.
 - ODC can call the backend successfully.
@@ -26,43 +26,30 @@ As of 2026-03-18:
   - `Client.ScreenCount`
   - `Client.TableCount`
   - `Client.Department`
-- `DoTestCalculate` now passes all three into:
+- `DoTestCalculate` passes all three into:
   - `GetCalculateSimpleGet.screen_count`
   - `GetCalculateSimpleGet.table_count`
   - `GetCalculateSimpleGet.department`
-- The backend route `GET /calculate_simple_get` has also been extended to accept `department`.
-- Dynamic input has been verified in the browser for both counts and department changes.
-- One confirmed department-sensitive case is:
-  - `department = ＣＳ第１システム開発部`
-  - `screen_count = 4`
-  - `table_count = 7`
-  - result changes from the previous default-department case
-- On Windows ODC Studio, `EstimateForm` was updated locally so `Department` now uses a proper `Dropdown`.
-- That dropdown is wired as:
+- The backend route `GET /calculate_simple_get` accepts `department` as the formal department name string.
+- `EstimateForm` now uses a working `Dropdown` for `Department`.
+- The dropdown is wired as:
   - `Dropdown1.Variable = Client.Department`
   - `Dropdown1.List = GetDepartmentMasters.List`
-  - `Options Text = DepartmentMaster.DisplayName`
-  - `Options Value = DepartmentMaster.DisplayName`
-- `GetDepartmentMasters` was added on the screen side with:
+  - `Dropdown1.Options Text = DepartmentMaster.DisplayName`
+  - `Dropdown1.Options Value = DepartmentMaster.DisplayName`
+- `Client.Department` is `Text`.
+- `GetDepartmentMasters` is configured with:
   - source: `DepartmentMaster`
   - filter: `DepartmentMaster.Is_Active = True`
   - sorting: `DepartmentMaster.Order (ASC)`
-- The old temporary radio-based department selector is no longer the target direction.
-- However, the updated ODC screen has not yet been published successfully from Windows.
-- `1-Click Publish` on Windows ODC Studio reaches save/upload but ends with:
-  - `Your current role doesn't allow you to perform this action in this app. (Forbidden)`
-- Browser access to the personal ODC environment still works, and Mac ODC Studio does not show the same behavior.
-- The latest working local artifact was exported/saved as:
-  - `C:\Users\hongouj\OneDrive - NTT DATA\ドキュメント\OSML\AI Estimation System.oml`
-- That `.oml` was then copied into this repository for handoff on branch:
-  - `codex/odc-dropdown-transfer`
-- Repository handoff path:
-  - `OML/AI Estimation System.oml`
-- Later verification showed that Mac cannot reliably open/use that `.oml` handoff path for this task.
-- Therefore, the practical resume strategy is now:
-  - do all future ODC work on Mac only
-  - treat the Windows OML as historical evidence of the attempted configuration
-  - reproduce the dropdown changes directly in the Mac-hosted ODC app by following the documented steps
+- `DepartmentMaster` now contains the BS department master data required by the dropdown.
+- Browser verification is complete for:
+  - changing `screen_count`
+  - changing `table_count`
+  - changing `department`
+- Department change is confirmed to affect the estimate result when switching across departments with different coefficients.
+- There are currently no blocking ODC validation errors or warnings related to the old unused parsing action; the unused `ParseEstimateResponse` action has been removed.
+- Windows ODC Studio publish remains historical troubleshooting context only. The current trusted working path is Mac ODC Studio plus the live server-side app state.
 
 ## What Works
 
@@ -92,7 +79,7 @@ As of 2026-03-18:
 - user can type `table_count`
 - user can now change `department`
 - current screen includes:
-  - the last confirmed server-side screen still needs the `Department` dropdown re-applied on Mac
+  - `Department` dropdown backed by `DepartmentMaster`
   - `Screen Count` input
   - `Table Count` input
   - `Run Estimate` button
@@ -134,7 +121,7 @@ Definition:
 - extend backend contract and ODC bindings in small increments
 - keep the current GET-based working loop stable while expanding inputs
 
-This milestone is now started and partially achieved.
+This milestone is now achieved for `department`.
 
 ## Main Technical Strategy
 
@@ -180,37 +167,31 @@ In ODC:
    - `department`
    - `screen_count`
    - `table_count`
-3. On Mac ODC Studio, open the current app/server version of `EstimateForm`
-4. Re-apply the `Department` dropdown using the exact reproduction steps in `docs/odc_notes.md`
-5. Publish from Mac ODC Studio
-6. Verify in the browser that:
-   - `Department` renders as a dropdown
+3. Use the current `DepartmentMaster` data and dropdown wiring as the baseline
+4. Continue expanding additional business inputs without regressing the current end-to-end flow
+5. Verify in the browser after each change that:
+   - `Department` still renders as a dropdown
    - formal department names are shown
    - selecting a department still updates the backend result correctly
-7. Only after publish is verified, continue expanding additional business inputs
 
 ## Success Condition For The Next Session
 
 The next milestone is complete when:
 
-- the user can choose from formal department names in a dropdown
-- the backend receives the exact formal value
-- the displayed result still updates correctly
+- the existing department dropdown still works after further changes
+- the backend still receives the exact formal department value
+- the displayed result still updates correctly while new business inputs are added
 
 ## Current Resume Point
 
 If work resumes in a new session, start from:
 
-1. Read `docs/odc_notes.md` first for the exact dropdown reproduction steps
-2. On Mac ODC Studio, open the current app version of `EstimateForm`
-3. Recreate the `Department` dropdown directly in the app
-4. Keep the existing `DoTestCalculate` / `GetCalculateSimpleGet` flow intact
-5. Publish from Mac
-6. Verify browser behavior for:
-   - `Department`
-   - `Screen Count`
-   - `Table Count`
-7. Do not revert to free-text department input
+1. Treat the current Dify workflow as the primary implementation track
+2. Use the full Dify workflow-compatible logic file:
+   - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow.py`
+3. Align the Dify input UI with the calculation logic so visible inputs are truly reflected in the result
+4. Keep the current OutSystems work as supporting validation context, not the main delivery path
+5. Continue with Dify-centered demo hardening and presentation preparation
 
 ## Source Files
 

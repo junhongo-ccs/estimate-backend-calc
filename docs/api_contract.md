@@ -158,11 +158,15 @@ The ODC action currently passes ODC client variables:
 Current ODC screen state:
 
 - `EstimateForm` contains a working department selector plus two numeric inputs
-- `Department` is currently a temporary radio-based selector, not the final dropdown
+- `Department` is a working dropdown backed by `DepartmentMaster`
 - `Department` is bound to `Client.Department`
 - `Screen Count` is bound to `Client.ScreenCount`
 - `Table Count` is bound to `Client.TableCount`
 - `DoTestCalculate` passes those values into `GetCalculateSimpleGet`
+- `Client.Department` is `Text`
+- `Dropdown1.List = GetDepartmentMasters.List`
+- `Dropdown1.Options Text = DepartmentMaster.DisplayName`
+- `Dropdown1.Options Value = DepartmentMaster.DisplayName`
 
 Verified live browser case:
 

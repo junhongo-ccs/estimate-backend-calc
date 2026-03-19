@@ -144,14 +144,15 @@ One confirmed browser case:
 
 Current state:
 
-- free-text department input was only a temporary step
-- a temporary `Radio Group` now works
-- this is not the target UI because the real department count is 10+
+- free-text department input is no longer used
+- the temporary `Radio Group` is no longer used
+- `Department` now works as a `Dropdown`
+- `DepartmentMaster` now contains the required department records
 
 Preferred next state:
 
-- `Department` should become a `Dropdown`
-- the dropdown should expose formal department names only
+- keep `Department` as a `Dropdown`
+- keep formal department names as both the display and transmitted value
 - do not go back to free text
 
 ## Department Dropdown Reproduction Guide
@@ -160,7 +161,7 @@ Use this section if you need to recreate the dropdown on Mac from the current se
 
 ### Goal
 
-Replace the temporary `Department` radio selector with a proper dropdown while preserving the already-working backend call path.
+Preserve the working dropdown-based `Department` flow while keeping the already-working backend call path intact.
 
 ### Do Not Change
 
@@ -213,33 +214,30 @@ Do not send:
 
 If you send the ID, the backend request will no longer match the current contract.
 
-### Actual Working Reconstruction Sequence
+### Actual Working Sequence
 
 Follow this sequence exactly.
 
 1. Open `EstimateForm` in the `Interface` tab.
-2. Find the current temporary `Radio Group` used for `Department`.
+2. Confirm the `Department` widget is a `Dropdown`.
 3. Confirm it is bound to:
    - `Client.Department`
-4. Add a new `Dropdown` near the current department selector.
-5. Set the dropdown `Variable` to:
-   - `Client.Department`
-6. Do not delete the old radio group yet.
-7. Create a new screen aggregate under `EstimateForm`:
+4. Confirm `Client.Department` is `Text`.
+5. Confirm the screen aggregate exists under `EstimateForm`:
    - `GetDepartmentMasters`
-8. Add `DepartmentMaster` as the source.
-9. Add the filter:
+6. Confirm the aggregate source is:
+   - `DepartmentMaster`
+7. Confirm the filter is:
    - `DepartmentMaster.Is_Active = True`
-10. Add sorting:
+8. Confirm the sorting is:
    - `DepartmentMaster.Order (ASC)`
-11. Return to the new dropdown.
-12. Set:
+9. Confirm the dropdown settings are:
    - `List = GetDepartmentMasters.List`
-13. For `Options Text`, choose:
-   - `DepartmentMaster.DisplayName`
-14. For `Options Value`, choose:
-   - `DepartmentMaster.DisplayName`
-15. Only after the dropdown is fully wired, remove or hide the temporary radio group if the environment allows it.
+   - `Options Text = DepartmentMaster.DisplayName`
+   - `Options Value = DepartmentMaster.DisplayName`
+10. Confirm `DepartmentMaster > Records` contains the BS department master data.
+11. Publish.
+12. Verify in the browser that changing department changes the estimate result for departments with different coefficients.
 
 ### Failed Approach That Looked Promising But Should Be Avoided
 
@@ -291,11 +289,11 @@ Current operating assumption:
 - Windows ODC Studio is not trusted for future ODC work on this task
 - all future ODC work should be done on Mac
 
-### If Rebuilding From Scratch On Mac
+### Current Working State On Mac
 
 The success checklist is:
 
-1. `EstimateForm` still shows:
+1. `EstimateForm` shows:
    - `Screen Count`
    - `Table Count`
    - `Run Estimate`
@@ -303,7 +301,8 @@ The success checklist is:
    - `GetCalculateSimpleGet`
 3. `Department` is a dropdown, not radio or free text
 4. Dropdown value is the formal department name
-5. Browser verification still works for:
+5. `DepartmentMaster` contains the live BS department list used by the dropdown
+6. Browser verification works for:
    - department change
    - screen count change
    - table count change
