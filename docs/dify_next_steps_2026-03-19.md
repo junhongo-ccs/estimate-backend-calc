@@ -1,92 +1,106 @@
 # Dify 再始動メモ
 
-## 方針
+## 現在の到達点
 
-- 主軸は OutSystems 再現ではなく Dify に戻す
-- 理由は、発表までに価値を見せるうえで、Dify の方が実装と改善の速度が高いから
-- 今後は、Dify の入力UIと Python 計算ロジックを一致させることを優先する
+- Dify を主戦場とする方針で固定
+- ワークフローは以下で整理済み
+  - `ユーザー入力`
+  - `コード実行`
+  - `知識検索`
+  - `LLM`
+- `コード実行` ノードは最新形では
+  - `calc_json`
+  - `query_for_rag`
+  を返す
+- `知識検索` ノードは
+  - `コード実行 / query_for_rag`
+  をクエリとして使う
+- `LLM` ノードは
+  - `context` に知識検索結果
+  - `USER` に `userinput.query` + `コード実行 / calc_json`
+  を入れる構成に整理済み
 
-## 現状認識
+## 直近で確定した重要事項
 
-- Dify の入力画面には、`department`、`estimation_profile`、`target_margin`、`target_platform`、`dev_type`、`screen_count`、`complexity`、`tables`、`table_count`、`features`、`duration`、`confidence`、`phase2_items`、`phase3_items`、`dept_allocation`、`team_ratio` が並んでいる
-- ただし、Dify 上で実際に使っていたコードは軽量版で、入力UIの全項目をまだ活かし切れていなかった
-- そのため、見えている入力と効いている計算ロジックを一致させる必要がある
+### 1. UIUX 見積はもう素通りではない
 
-## 追加したファイル
+`33_design_cost_standards.md` を基準に、Phase 3 ロジックを Python 側へ反映済み。
 
-- Dify のコードノード差し替え用に、フル版ロジックをワークフロー互換の返却形式で保存した
-- 保存先:
-  - [/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow.py](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow.py)
+反映内容:
 
-## このファイルの意図
+- UIデザイン
+- デザインシステム / ガイドライン
+- プロトタイプ
+- ロゴ・ブランディング
+- 外注費単価
+- 管理費 15%
+- confidence 係数
 
-- ベースは本命版の見積ロジック
-- Dify ワークフローの後段を壊しにくいよう、返り値は `calc_json` にそろえてある
-- これにより、今の Dify ワークフロー上で:
-  - `duration`
-  - `dev_type`
-  - `target_platform`
-  - `phase2_items`
-  - `phase3_items`
-  - `confidence`
-  - `dept_allocation`
-  - `team_ratio`
- まで計算に反映できる状態を目指す
+### 2. 確認済みの検証結果
 
-## 差し替え後の確認順
+以下のサンプル入力で:
 
-1. `department` を変えて結果が変わる
-2. `duration` を変えて結果が変わる
-3. `dev_type` を変えて結果が変わる
-4. `target_platform` を変えて結果が変わる
-5. `phase2_items` を追加して結果が変わる
-6. `target_margin` を入れて逆算売価が出る
-7. `team_ratio` を変えて直接労務費が変わる
-8. `dept_allocation` を変えて部門係数が変わる
+- `screen_count = 22`
+- `features = ユーザー認証`
+- `phase3_items = UIデザイン,デザインシステム`
+- `confidence = medium`
 
-## 次回の作業方針
+コード実行出力は次を返した:
 
-- 次回は機能追加より先に、今日換装した計算式が本当に生きているかを検証する
-- 主目的は、Dify の入力UIに見えている各項目が、結果へ正しく反映されることを確認すること
+- `features = [auth]`
+- `phase3_items = [ui_design, design_system]`
+- `outsource_cost = 810000`
+- `management_fee = 121500`
+- `confidence_multiplier = 1.2`
+- `total_phase3_cost = 1117800`
 
-## 次回の検証観点
+これは期待値どおりであり、UIUX チーム基準が実計算に入っていることを確認済み。
 
-各入力について、次を確認する:
+## 現在の推奨コード元
 
-1. 入力を変えたら結果が変わるか
-2. 変わるべき方向に変わるか
-3. LLM の説明文がその変更を正しく説明しているか
+- [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
 
-## 次回の検証対象
+このファイルに含まれるもの:
 
-優先順:
+- Dify UI ラベル吸収
+- `tables` のノイズ除去
+- `query_for_rag`
+- `phase3_breakdown`
+- `33_design_cost_standards.md` ベースの Phase 3 計算
 
-1. `department`
-2. `duration`
-3. `dev_type`
-4. `target_platform`
-5. `features`
-6. `phase2_items`
-7. `phase3_items`
-8. `target_margin`
-9. `team_ratio`
-10. `dept_allocation`
+## 現在の推奨デモ運用
 
-## 次回の位置づけ
+- 発表本編は録画
+- URL の全体公開はしない
+- 希望者に個別案内
 
-- 次回は「計算ロジックの疎通確認日」とする
-- ここが通れば、その後は発表用デモ設計と見せ方の調整に入る
+## 録画で見せるべき内容
 
-## 発表に向けた重点
+### シーン A
 
-- 追加実装を増やすより、Dify 上の見えている入力が本当に効いている状態を作る
-- 特に見せ場は:
-  - 部署差
-  - 人材レイヤー差
-  - 他部署応援差
-  - 営業利益率からの逆算売価
+- 条件入力
+- UIUX フェーズ込みの見積結果
+- 目標利益率から必要売価が出る様子
 
-## 補足
+### シーン B
 
-- OutSystems 側の検証は無駄ではなく、部門差やマスタ設計の確認には役立った
-- ただし、発表までの主戦場は Dify とする
+- 結果に対する追加質問
+- 例:
+  - 工数内訳
+  - 赤字要因
+  - 目標利益率達成売価
+  - UIUX フェーズがどう反映されているか
+
+## 発表で使いやすいメッセージ
+
+- 出発点は UIUX チームの提案余地を増やすことだった
+- チームに開発者がいない中で Vibe Coding で実装した
+- AI は最初それっぽく振る舞ったが、UIUX 見積を実計算には入れていなかった
+- そこを Codex と一緒に検証し、UIUX 見積も計算に乗るところまで持っていった
+
+## 次にやること
+
+1. 発表録画を完成させる
+2. 使う入力パターンを固定する
+3. 想定質問を 5〜10 本に絞る
+4. 発表資料にこのストーリーを反映する
