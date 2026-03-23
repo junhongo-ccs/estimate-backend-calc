@@ -13,6 +13,12 @@ When resuming work in a new conversation or with a different AI session, read th
 
 ## File Roles
 
+### `dify_document_output_version_plan_2026-03-23.md`
+- Plan for duplicating the current Dify estimate app
+- Minimal sequence for estimate-document output
+- Workflow node wiring for the document version
+- New code needed to convert `calc_json` into PDF input
+
 ### `master_status.md`
 - Single source of truth for current state
 - Active milestone

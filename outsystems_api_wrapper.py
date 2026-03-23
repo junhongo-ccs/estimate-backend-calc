@@ -9,6 +9,11 @@ import sys
 import urllib.request
 import urllib.error
 import html
+from pricing_simulator_input import (
+    DEFAULT_CURRENCY,
+    DEFAULT_PROJECT_NAME,
+    build_pricing_simulator_input,
+)
 
 # dify_assets/code/estimate_logic.py があるディレクトリをパスに追加
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dify_assets", "code"))
@@ -94,6 +99,28 @@ class ReportRequest(BaseModel):
     output_format: Optional[str] = "markdown"
 
 
+class PricingSimulatorRequest(EstimationRequest):
+    project_name: Optional[str] = None
+    currency: Optional[str] = DEFAULT_CURRENCY
+
+
+def _unwrap_dify_result(result: Any) -> Any:
+    while isinstance(result, dict) and len(result) == 1:
+        key = list(result.keys())[0]
+        if key in ["result", "calc_json"]:
+            val = result[key]
+            if isinstance(val, str):
+                try:
+                    result = json.loads(val)
+                except json.JSONDecodeError:
+                    break
+            else:
+                result = val
+        else:
+            break
+    return result
+
+
 def generate_report_with_gemini(request: ReportRequest) -> str:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is not set")
@@ -176,22 +203,8 @@ async def calculate(request: EstimationRequest):
             req_data["estimation_profile"] = req_data["profile"]
         
         result = dify_main(**req_data)
-        
-        # 不要なラップを剥がすロジック
-        while isinstance(result, dict) and len(result) == 1:
-            key = list(result.keys())[0]
-            if key in ["result", "calc_json"]:
-                val = result[key]
-                if isinstance(val, str):
-                    try:
-                        result = json.loads(val)
-                    except json.JSONDecodeError:
-                        break
-                else:
-                    result = val
-            else:
-                break
-                
+
+        result = _unwrap_dify_result(result)
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -205,19 +218,7 @@ async def health():
 async def calculate_test():
     try:
         result = dify_main(**DEFAULT_TEST_REQUEST)
-        while isinstance(result, dict) and len(result) == 1:
-            key = list(result.keys())[0]
-            if key in ["result", "calc_json"]:
-                val = result[key]
-                if isinstance(val, str):
-                    try:
-                        result = json.loads(val)
-                    except json.JSONDecodeError:
-                        break
-                else:
-                    result = val
-            else:
-                break
+        result = _unwrap_dify_result(result)
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -232,19 +233,7 @@ async def calculate_simple(request: SimpleEstimationRequest):
         req_data["department"] = request.department
 
         result = dify_main(**req_data)
-        while isinstance(result, dict) and len(result) == 1:
-            key = list(result.keys())[0]
-            if key in ["result", "calc_json"]:
-                val = result[key]
-                if isinstance(val, str):
-                    try:
-                        result = json.loads(val)
-                    except json.JSONDecodeError:
-                        break
-                else:
-                    result = val
-            else:
-                break
+        result = _unwrap_dify_result(result)
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -263,20 +252,65 @@ async def calculate_simple_get(
         req_data["department"] = department
 
         result = dify_main(**req_data)
-        while isinstance(result, dict) and len(result) == 1:
-            key = list(result.keys())[0]
-            if key in ["result", "calc_json"]:
-                val = result[key]
-                if isinstance(val, str):
-                    try:
-                        result = json.loads(val)
-                    except json.JSONDecodeError:
-                        break
-                else:
-                    result = val
-            else:
-                break
+        result = _unwrap_dify_result(result)
         return _utf8_json_response(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/pricing_simulator_input")
+async def pricing_simulator_input(request: PricingSimulatorRequest):
+    try:
+        req_data = request.dict()
+        project_name = req_data.pop("project_name", None)
+        currency = req_data.pop("currency", DEFAULT_CURRENCY)
+        if not req_data.get("estimation_profile") and req_data.get("profile"):
+            req_data["estimation_profile"] = req_data["profile"]
+
+        result = _unwrap_dify_result(dify_main(**req_data))
+        pricing_input = build_pricing_simulator_input(
+            result,
+            project_name=project_name,
+            target_margin=req_data.get("target_margin"),
+            currency=currency,
+        )
+        return _utf8_json_response({
+            "status": "success",
+            "pricing_simulator_input": pricing_input,
+            "estimation_result": result,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/pricing_simulator_input_simple_get")
+async def pricing_simulator_input_simple_get(
+    screen_count: int = Query(DEFAULT_TEST_REQUEST["screen_count"]),
+    table_count: int = Query(DEFAULT_TEST_REQUEST["table_count"]),
+    department: str = Query(DEFAULT_TEST_REQUEST["department"]),
+    project_name: str = Query(DEFAULT_PROJECT_NAME),
+    target_margin: float = Query(DEFAULT_TEST_REQUEST["target_margin"]),
+    currency: str = Query(DEFAULT_CURRENCY),
+):
+    try:
+        req_data = dict(DEFAULT_TEST_REQUEST)
+        req_data["screen_count"] = screen_count
+        req_data["table_count"] = table_count
+        req_data["department"] = department
+        req_data["target_margin"] = target_margin
+
+        result = _unwrap_dify_result(dify_main(**req_data))
+        pricing_input = build_pricing_simulator_input(
+            result,
+            project_name=project_name,
+            target_margin=target_margin,
+            currency=currency,
+        )
+        return _utf8_json_response({
+            "status": "success",
+            "pricing_simulator_input": pricing_input,
+            "estimation_result": result,
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

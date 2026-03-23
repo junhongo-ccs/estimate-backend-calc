@@ -20,6 +20,33 @@ Azure AI Agent からツールとして呼び出され、YAML設定に基づく�
 
 ## 📖 API 仕様
 
+現在の前段 -> 後段 Dify 連結では、積算 API の結果そのものではなく、後段向けに整形した最小 JSON を返す専用エンドポイントも使えます。
+
+### `POST /pricing_simulator_input`
+
+前段の積算条件から、後段 Dify 価格シミュレーター用の最小 JSON を返します。
+
+レスポンス例:
+
+```json
+{
+  "status": "success",
+  "pricing_simulator_input": {
+    "project_name": "案件A",
+    "cost": 44443984,
+    "current_sales": 31921098,
+    "target_margin": 0.2,
+    "currency": "JPY"
+  }
+}
+```
+
+補足:
+
+- `current_sales` は前段の見積売価です
+- `cost` は `COGS + SG&A` です
+- この形にすることで、後段 Dify 側の `required_sales = cost / (1 - target_margin)` と前段ロジックが一致します
+
 ### `POST /api/calculate_estimate`
 
 見積金額を計算します。

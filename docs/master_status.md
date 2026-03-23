@@ -2,199 +2,186 @@
 
 ## Objective
 
-Recreate the Dify-based AI estimation PoC in OutSystems ODC, starting with a minimal but real end-to-end path:
+Deliver a credible 2026-03-31 demo using Dify as the primary implementation track.
 
-- ODC UI
-- Railway-hosted backend
-- estimation result returned and displayed
+This is not just a generic AI estimate demo. The core business objective is:
 
-The immediate goal is not full parity yet. The immediate goal is stable ODC-to-backend integration with visible business output.
+- enable UIUX-phase work to be included earlier in development proposals
+- make UIUX estimation visible to development-side stakeholders
+- show that a non-engineer-led team can still build a business-facing PoC to this level
 
 ## Current State
 
-As of 2026-03-17:
+As of 2026-03-19:
 
-- Railway backend is live and reachable.
-- ODC can call the backend successfully.
-- UTF-8 response handling is fixed, and yen/range text renders correctly in ODC.
-- The active ODC action flow uses `GetCalculateSimpleGet`.
-- `EstimateForm` has working user-editable inputs for:
-  - `screen_count`
-  - `table_count`
-  - `department`
-- Those values are bound in ODC through:
-  - `Client.ScreenCount`
-  - `Client.TableCount`
-  - `Client.Department`
-- `DoTestCalculate` now passes all three into:
-  - `GetCalculateSimpleGet.screen_count`
-  - `GetCalculateSimpleGet.table_count`
-  - `GetCalculateSimpleGet.department`
-- The backend route `GET /calculate_simple_get` has also been extended to accept `department`.
-- Dynamic input has been verified in the browser for both counts and department changes.
-- One confirmed department-sensitive case is:
-  - `department = ＣＳ第１システム開発部`
-  - `screen_count = 4`
-  - `table_count = 7`
-  - result changes from the previous default-department case
-- The current UI state uses a temporary `Radio Group` for `Department` with a few fixed choices.
-- That radio-based solution works as a PoC, but it is not the desired final UI because the real number of departments is 10+.
-- The agreed next UI direction is:
-  - replace the temporary radio group
-  - move `Department` to a proper `Dropdown`
-  - keep formal department names as the selectable values
+- Dify is the primary delivery path.
+- Presentation preparation has shifted from live broad-URL demo to:
+  - recorded demo first
+  - individual follow-up sharing only when necessary
+- The Dify workflow path is:
+  - `ユーザー入力`
+  - `コード実行`
+  - `知識検索`
+  - `LLM`
+- The code execution node returns:
+  - `calc_json`
+  - `query_for_rag`
+- The knowledge search node uses:
+  - `コード実行 / query_for_rag`
+- The LLM node uses:
+  - knowledge-search `context` as background-only input
+  - `コード実行 / calc_json` in the USER message as the factual input
 
-## What Works
+## What Is Now Materially Achieved
 
-### Backend
+### 1. UIUX estimation is no longer just "explained"
 
-- `GET /calculate_test`
-  - fixed test endpoint
-  - no request payload needed
-  - used to prove first E2E flow
+It is now reflected in the deterministic Python calculation layer.
 
-- `GET /calculate_simple_get?screen_count={screen_count}&table_count={table_count}`
-  - now also supports `department`
-  - minimal dynamic endpoint
-  - lets ODC pass the currently stabilized PoC variables
-  - avoids complex POST request-structure binding in ODC
-  - already consumed successfully in ODC
-  - already wired into the current ODC action flow
+Specifically, the Phase 3 / UIUX side has been wired into the estimate engine based on:
 
-### ODC
+- [33_design_cost_standards.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_assets/knowledge/33_design_cost_standards.md)
 
-- `EstimateForm` screen exists
-- button triggers an action flow
-- action can call Railway backend
-- ODC variables are updated from backend response
-- visible output is already on screen
-- user can type `screen_count`
-- user can type `table_count`
-- user can now change `department`
-- current screen includes:
-  - temporary `Department` selector
-  - `Screen Count` input
-  - `Table Count` input
-  - `Run Estimate` button
-  - three displayed values for amount, man-days, and range
-- current action flow is:
-  - `GetCalculateSimpleGet`
-  - `JSON Serialize`
-  - `Assign`
-  - `Assign`
+This includes:
 
-## What Is Intentionally Deferred
+- UI design per-screen costing
+- design system / guideline costing
+- prototype costing
+- logo / branding costing
+- outsource basis
+- 15% management fee
+- confidence-based Phase 3 variance
 
-- Full Dify-equivalent POST request binding in ODC
-- Rich natural-language report generation in ODC
-- Password gate refinement
-- Advanced UI polish
-- RAG integration
-- Full production data model
+### 2. Latest verified Phase 3 calculation behavior
 
-## Active Milestone
+For a validation input of:
 
-### Milestone A: Stable Dynamic Input PoC
+- `screen_count = 22`
+- `phase3_items = UIデザイン, デザインシステム`
+- `confidence = medium`
 
-Definition:
+the code node returned:
 
-- User changes `screen_count`
-- User changes `table_count`
-- ODC calls backend with those values
-- amount/days/range update accordingly
+- `phase3_items = [ui_design, design_system]`
+- `outsource_cost = 810000`
+- `management_fee = 121500`
+- `confidence_multiplier = 1.2`
+- `total_phase3_cost = 1117800`
 
-This milestone is now achieved.
+This confirms that the UIUX team's design-cost logic is now in the actual computation path.
 
-### Milestone B: Expand Business Inputs
+### 3. Dify UI labels are mapped into Python logic
 
-Definition:
+The repo-side updated code now absorbs Dify UI labels for:
 
-- add more business-relevant inputs beyond counts
-- start with `department`
-- extend backend contract and ODC bindings in small increments
-- keep the current GET-based working loop stable while expanding inputs
+- `features`
+- `phase2_items`
+- `phase3_items`
 
-This milestone is now started and partially achieved.
+This prevents the earlier failure mode where the UI looked rich but the Python result returned empty arrays.
 
-## Main Technical Strategy
+### 4. The latest workflow supports result Q&A
 
-Use a staged backend interface:
+The working flow can now answer follow-up questions such as:
 
-1. `calculate_test`
-   - fixed GET
-   - proved ODC integration
+- breakdown of total man-days
+- main red-margin causes
+- required price to attain target margin
+- how Phase 3 / UIUX items are reflected
 
-2. `calculate_simple_get`
-   - dynamic GET with screen/query params
-   - current recommended route for ODC
-   - already integrated into the action flow
-   - now using screen-bound ODC variables inside the action
-   - currently proven for:
-     - `screen_count`
-     - `table_count`
-     - `department`
+while avoiding invented detail when `calc_json` does not contain it.
 
-3. Only after the ODC flow is stable:
-   - revisit richer POST contracts
+## Why This Matters
 
-This is a deliberate workaround for ODC request-typing friction.
+This project began as a UIUX-team mission, not as a generic engineering exercise.
 
-## Main Blocker History
+The original intent was:
 
-The dominant blocker was ODC request structure binding for POST methods.
+- to create a hook that helps development-side proposal work include UIUX phases
+- to reduce the weakness of UIUX estimation in development-led sales discussions
 
-Symptoms included:
-- request shape not recognized
-- local variable type not appearing where expected
-- `Request` parameter validation loops
-- hard-to-predict UI behavior in ODC
+The meaningful result is therefore not "an AI chatbot exists."
 
-This is why the current preferred route uses GET query params for the PoC phase.
+The meaningful result is:
 
-## Exact Next Step
+- UIUX-phase work is now visible in the estimate logic
+- that logic is tied to a deterministic Python engine
+- it is explainable through RAG and LLM
+- and it was brought to this point from a non-engineer-led context using Vibe Coding
 
-In ODC:
+## Workflow Architecture
 
-1. Keep `DoTestCalculate` wired to `GetCalculateSimpleGet`
-2. Preserve the already-working dynamic inputs for:
-   - `department`
-   - `screen_count`
-   - `table_count`
-3. Replace the temporary `Department` radio group with a proper `Dropdown`
-4. Populate that dropdown with the formal department names used by the backend
-5. Expand additional business inputs only after the department selector is stabilized
+Use strict separation of responsibilities:
 
-## Success Condition For The Next Session
+1. Dify UI
+   - collects user inputs
 
-The next milestone is complete when:
+2. Python code node
+   - computes the estimate deterministically
+   - emits:
+     - `calc_json`
+     - `query_for_rag`
 
-- `Department` is no longer free text
-- `Department` is no longer represented by a temporary radio group
-- the user can choose from formal department names in a dropdown
-- the backend receives the exact formal value
-- the displayed result still updates correctly
+3. Knowledge search
+   - uses `query_for_rag`
+   - retrieves basis/background material only
 
-## Current Resume Point
+4. LLM
+   - uses `calc_json` as the only case-fact source
+   - uses RAG only for explanation background
+
+This separation remains essential to avoid hallucinated case details.
+
+## Security / Demo Operating Mode
+
+- The Dify URL should not be broadly shared.
+- The logic and knowledge contain company-sensitive content.
+- SharePoint embedding does not solve the root issue under the current environment.
+- iframe/embed approaches are only entry masking, not true access control.
+
+Therefore the recommended operating mode is:
+
+- recorded demo in the main presentation
+- no public URL on slides
+- individual follow-up sharing only for interested people
+
+## Source of Truth for Copy/Paste
+
+The current recommended Dify code-node source file is:
+
+- [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+
+This file includes:
+
+- Dify UI label aliases
+- `tables` noise filtering
+- `query_for_rag`
+- Phase 3 logic aligned to `33_design_cost_standards.md`
+- `phase3_breakdown`
+
+## Exact Resume Point
 
 If work resumes in a new session, start from:
 
-1. Open `EstimateForm` in ODC
-2. Confirm the current browser still updates when changing:
-   - `Department`
-   - `Screen Count`
-   - `Table Count`
-3. Keep the current `DoTestCalculate` flow intact
-4. Replace the temporary `Department` radio selector with a dropdown
-5. Use formal department names only; do not go back to free-text department input
+1. Treat Dify as the only active implementation track.
+2. Use:
+   - [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+   as the copy/paste source for the Dify code execution node.
+3. Keep the knowledge-search node query bound to:
+   - `コード実行 / query_for_rag`
+4. Keep the LLM node structured as:
+   - system: rules only
+   - context: knowledge-search result
+   - user: `userinput.query` plus `コード実行 / calc_json`
+5. Use recorded demo as the presentation baseline.
+6. Use the verified Phase 3 sample if you need to prove UIUX logic reflection.
 
-## Source Files
+## Success Condition
 
-- Backend:
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/outsystems_api_wrapper.py`
+The current track is considered successful when:
 
-- Docs:
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/api_contract.md`
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/odc_notes.md`
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/daily/2026-03-13.md`
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/daily/2026-03-14.md`
-  - `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/daily/2026-03-17.md`
+- the recorded demo clearly shows estimate generation
+- UIUX / Phase 3 logic is visibly reflected
+- the report remains aligned with `calc_json`
+- follow-up Q&A stays grounded in the deterministic result
+- the presentation communicates that this is a UIUX-team business enabler, not just a technical toy
