@@ -12,7 +12,7 @@ This is not just a generic AI estimate demo. The core business objective is:
 
 ## Current State
 
-As of 2026-03-19:
+As of 2026-03-23:
 
 - Dify is the primary delivery path.
 - Presentation preparation has shifted from live broad-URL demo to:
@@ -26,11 +26,16 @@ As of 2026-03-19:
 - The code execution node returns:
   - `calc_json`
   - `query_for_rag`
+  - `pricing_simulator_input`
 - The knowledge search node uses:
   - `コード実行 / query_for_rag`
 - The LLM node uses:
   - knowledge-search `context` as background-only input
   - `コード実行 / calc_json` in the USER message as the factual input
+
+- A downstream pricing simulator app is now operating as a separate Dify app.
+- The estimate app now emits copy/paste JSON for that downstream app.
+- The downstream app now includes an opening guide so first-time users know what to paste and what they can ask.
 
 ## What Is Now Materially Achieved
 
@@ -91,6 +96,20 @@ The working flow can now answer follow-up questions such as:
 
 while avoiding invented detail when `calc_json` does not contain it.
 
+### 5. Estimate-to-pricing handoff is now explicit
+
+The front-side Dify app now emits:
+
+- a narrative estimate answer
+- a downstream simulator URL
+- `価格シミュレーターコピペ用JSON`
+
+The downstream app can accept that JSON directly and answer:
+
+- current sales/profit/margin
+- required sales for target margin
+- candidate-price comparisons
+
 ## Why This Matters
 
 This project began as a UIUX-team mission, not as a generic engineering exercise.
@@ -132,6 +151,11 @@ Use strict separation of responsibilities:
 
 This separation remains essential to avoid hallucinated case details.
 
+### 5. Downstream pricing app
+   - accepts minimal JSON only
+   - focuses on pricing simulation only
+   - now has opening guidance for first-time users
+
 ## Security / Demo Operating Mode
 
 - The Dify URL should not be broadly shared.
@@ -154,8 +178,10 @@ The current recommended Dify code-node source file is:
 This file includes:
 
 - Dify UI label aliases
+- `project_name` input support with fallback to `ユーザー案件`
 - `tables` noise filtering
 - `query_for_rag`
+- `pricing_simulator_input`
 - Phase 3 logic aligned to `33_design_cost_standards.md`
 - `phase3_breakdown`
 

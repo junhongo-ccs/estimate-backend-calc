@@ -26,6 +26,12 @@ When resuming work in a new conversation or with a different AI session, read th
 - What is blocked or deferred
 - Exact next step
 
+### `antigravity_dify_pricing_handoff_2026-03-23.md`
+- Detailed write-up of the estimate-app -> price-simulator handoff
+- Why the two-app Dify structure is intentional
+- What was changed in runtime and repo
+- What is demo-ready now
+
 ### `api_contract.md`
 - Backend endpoints used for ODC
 - Request/response shapes
