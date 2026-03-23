@@ -45,7 +45,7 @@ It is now reflected in the deterministic Python calculation layer.
 
 Specifically, the Phase 3 / UIUX side has been wired into the estimate engine based on:
 
-- [33_design_cost_standards.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_assets/knowledge/33_design_cost_standards.md)
+- [33_design_cost_standards.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_assets/knowledge/33_design_cost_standards.md)
 
 This includes:
 
@@ -173,7 +173,7 @@ Therefore the recommended operating mode is:
 
 The current recommended Dify code-node source file is:
 
-- [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+- [dify_estimate_logic_full_for_workflow_ui_mapped.py](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
 
 This file includes:
 
@@ -191,7 +191,7 @@ If work resumes in a new session, start from:
 
 1. Treat Dify as the only active implementation track.
 2. Use:
-   - [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+   - [dify_estimate_logic_full_for_workflow_ui_mapped.py](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
    as the copy/paste source for the Dify code execution node.
 3. Keep the knowledge-search node query bound to:
    - `コード実行 / query_for_rag`

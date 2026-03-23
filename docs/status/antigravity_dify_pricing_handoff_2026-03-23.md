@@ -250,8 +250,8 @@ This is demo-grade and explainable.
 
 If work resumes later, use these files first:
 
-1. [master_status.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/master_status.md)
-2. [antigravity_dify_pricing_handoff_2026-03-23.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/antigravity_dify_pricing_handoff_2026-03-23.md)
+1. [master_status.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/status/master_status.md)
+2. [antigravity_dify_pricing_handoff_2026-03-23.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/status/antigravity_dify_pricing_handoff_2026-03-23.md)
 3. [dify_estimate_logic_full_for_workflow_ui_mapped.py](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
 
 ## Next Practical Step

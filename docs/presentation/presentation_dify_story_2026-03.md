@@ -260,10 +260,10 @@
 ## 参考ファイル
 
 - Dify コードノードの推奨コピペ元:
-  - [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+  - [dify_estimate_logic_full_for_workflow_ui_mapped.py](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
 
 - 全体状況:
-  - [master_status.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/docs/master_status.md)
+  - [master_status.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/status/master_status.md)
 
 - Dify 再開メモ:
-  - [dify_next_steps_2026-03-19.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/docs/dify_next_steps_2026-03-19.md)
+  - [dify_next_steps_2026-03-19.md](/Users/hongoujun/Documents/GitHub/estimate-backend-calc/docs/dify/dify_next_steps_2026-03-19.md)
