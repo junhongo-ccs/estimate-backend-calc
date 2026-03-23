@@ -132,6 +132,67 @@ Status:
 - implemented in backend
 - not the current ODC focus
 
+### 6. `POST /pricing_simulator_input`
+
+Purpose:
+- convert the estimation result into the minimal JSON expected by the downstream Dify pricing simulator
+- keep estimate-calculation logic and pricing-simulation chat separated
+
+Request body:
+
+```json
+{
+  "screen_count": 12,
+  "table_count": 4,
+  "department": "ビジネスイノベーション事業部共通",
+  "project_name": "案件A",
+  "target_margin": 0.2,
+  "currency": "JPY"
+}
+```
+
+Response shape:
+
+```json
+{
+  "status": "success",
+  "pricing_simulator_input": {
+    "project_name": "案件A",
+    "cost": 44443984,
+    "current_sales": 31921098,
+    "target_margin": 0.2,
+    "currency": "JPY"
+  },
+  "estimation_result": {
+    "status": "success",
+    "estimated_amount": 31921098
+  }
+}
+```
+
+Mapping rule:
+
+- `current_sales` = `profit_analysis.sales`
+- `cost` = `profit_analysis.cogs + profit_analysis.total_sga_cost`
+- `target_margin` = request value if given, otherwise parsed from `input_echo.target_margin`
+
+Reason:
+
+- the downstream Dify simulator uses `required_sales = cost / (1 - target_margin)`
+- to keep this aligned with the backend's existing suggested-price logic, `cost` must include SG&A as well as COGS
+
+### 7. `GET /pricing_simulator_input_simple_get`
+
+Purpose:
+- simple GET route for quick ODC or browser validation
+- same output contract as `POST /pricing_simulator_input`
+
+Example:
+
+```text
+/pricing_simulator_input_simple_get?screen_count=12&table_count=4&department=ビジネスイノベーション事業部共通&project_name=案件A&target_margin=0.2&currency=JPY
+```
+
 ## Backend Notes
 
 Implementation file:

@@ -1,0 +1,54 @@
+import unittest
+
+from pricing_simulator_input import build_pricing_simulator_input
+
+
+class TestPricingSimulatorInput(unittest.TestCase):
+    def test_build_pricing_simulator_input_uses_total_business_cost(self):
+        estimation_result = {
+            "profit_analysis": {
+                "sales": 53337500,
+                "cogs": 35337500,
+                "total_sga_cost": 8000000,
+            },
+            "input_echo": {
+                "target_margin": "20.0%",
+            },
+        }
+
+        payload = build_pricing_simulator_input(
+            estimation_result,
+            project_name="案件A",
+            currency="JPY",
+        )
+
+        self.assertEqual(payload["project_name"], "案件A")
+        self.assertEqual(payload["cost"], 43337500)
+        self.assertEqual(payload["current_sales"], 53337500)
+        self.assertEqual(payload["target_margin"], 0.2)
+        self.assertEqual(payload["currency"], "JPY")
+
+    def test_explicit_target_margin_takes_priority(self):
+        estimation_result = {
+            "profit_analysis": {
+                "sales": 60000000,
+                "cogs": 30000000,
+                "total_sga_cost": 5000000,
+            },
+            "input_echo": {
+                "target_margin": "15.0%",
+            },
+        }
+
+        payload = build_pricing_simulator_input(
+            estimation_result,
+            project_name="案件B",
+            target_margin=0.25,
+            currency="JPY",
+        )
+
+        self.assertEqual(payload["target_margin"], 0.25)
+
+
+if __name__ == "__main__":
+    unittest.main()
