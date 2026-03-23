@@ -494,6 +494,7 @@ def main_logic(req_body, tables=None):
 
 def main(**kwargs):
     args = dict(kwargs)
+    args["project_name"] = (args.get("project_name") or "ユーザー案件").strip() or "ユーザー案件"
 
     for key in ["features", "phase2_items", "phase3_items", "tables"]:
         args[key] = parse_list_from_text(args.get(key))
@@ -521,7 +522,7 @@ def main(**kwargs):
     try:
         data = main_logic(args, args.get("tables", []))
         pricing_simulator_input = {
-            "project_name": "案件A",
+            "project_name": args["project_name"],
             "cost": data["profit_analysis"]["cogs"] + data["profit_analysis"]["sga_cost"],
             "current_sales": data["profit_analysis"]["sales"],
             "target_margin": float(args.get("target_margin") or 0),
