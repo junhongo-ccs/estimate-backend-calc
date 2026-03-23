@@ -520,9 +520,19 @@ def main(**kwargs):
 
     try:
         data = main_logic(args, args.get("tables", []))
+        pricing_simulator_input = {
+            "project_name": "案件A",
+            "cost": data["profit_analysis"]["cogs"] + data["profit_analysis"]["sga_cost"],
+            "current_sales": data["profit_analysis"]["sales"],
+            "target_margin": float(args.get("target_margin") or 0),
+            "currency": "JPY",
+        }
         return {
             "calc_json": json.dumps(data, ensure_ascii=False, indent=2),
             "query_for_rag": rag_query,
+            "pricing_simulator_input": json.dumps(
+                pricing_simulator_input, ensure_ascii=False, indent=2
+            ),
         }
     except Exception as e:
         import traceback
@@ -536,4 +546,5 @@ def main(**kwargs):
         return {
             "calc_json": json.dumps(err_data, ensure_ascii=False, indent=2),
             "query_for_rag": rag_query,
+            "pricing_simulator_input": "",
         }
