@@ -40,7 +40,7 @@ It is now reflected in the deterministic Python calculation layer.
 
 Specifically, the Phase 3 / UIUX side has been wired into the estimate engine based on:
 
-- [33_design_cost_standards.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_assets/knowledge/33_design_cost_standards.md)
+- [33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_assets/knowledge/33_%E3%83%87%E3%82%B6%E3%82%A4%E3%83%B3%E5%A4%96%E6%B3%A8%E8%B2%BB%E7%A9%8D%E7%AE%97%E5%9F%BA%E6%BA%96_UI%E3%83%97%E3%83%AD%E3%83%88%E3%82%BF%E3%82%A4%E3%83%97%E3%83%AD%E3%82%B4%E7%AE%A1%E7%90%86%E8%B2%BB%E3%83%90%E3%83%AA%E3%82%A2%E3%83%B3%E3%82%B9.md)
 
 This includes:
 
@@ -156,8 +156,11 @@ This file includes:
 - Dify UI label aliases
 - `tables` noise filtering
 - `query_for_rag`
-- Phase 3 logic aligned to `33_design_cost_standards.md`
+- `pricing_simulator_input`
+- Phase 3 logic aligned to `33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md`
 - `phase3_breakdown`
+
+Older Dify-only script variants have been removed. Use this file only.
 
 ## Exact Resume Point
 

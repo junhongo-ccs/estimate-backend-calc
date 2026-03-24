@@ -45,3 +45,26 @@ def build_pricing_simulator_input(
     if normalized_target_margin is not None:
         payload["target_margin"] = normalized_target_margin
     return payload
+
+
+def attach_pricing_simulator_input(
+    estimation_result: Any,
+    project_name: Optional[str] = None,
+    target_margin: Any = None,
+    currency: Optional[str] = None,
+) -> Any:
+    if not isinstance(estimation_result, dict):
+        return estimation_result
+    if estimation_result.get("status") != "success":
+        return estimation_result
+    if "pricing_simulator_input" in estimation_result:
+        return estimation_result
+
+    enriched = dict(estimation_result)
+    enriched["pricing_simulator_input"] = build_pricing_simulator_input(
+        enriched,
+        project_name=project_name,
+        target_margin=target_margin,
+        currency=currency,
+    )
+    return enriched

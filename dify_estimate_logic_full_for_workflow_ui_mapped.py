@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Dify Code Node の唯一の正本。
+このファイルを Dify のコード実行ノードに貼り付けて使う。
+"""
 import json
 from typing import List, Dict, Any
 
@@ -134,7 +138,7 @@ PHASE2_LABEL_MAP = {
 }
 
 PHASE3_ITEMS = {
-    # Values are based on 33_design_cost_standards.md.
+# Values are based on 33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md.
     # unit = "per_screen" uses screen_count, otherwise fixed by mandays * outsource daily rate.
     "ui_design": {"unit": "per_screen", "mandays": 0.375},
     "design_system": {"unit": "fixed", "mandays": 1.875},
@@ -520,13 +524,18 @@ def main(**kwargs):
 
     try:
         data = main_logic(args, args.get("tables", []))
+        target_margin = args.get("target_margin")
+        project_name = (args.get("project_name") or "ユーザープロジェクト").strip() or "ユーザープロジェクト"
+        profit = data["profit_analysis"]
+        sga_cost = profit.get("total_sga_cost", profit.get("sga_cost", 0))
         pricing_simulator_input = {
-            "project_name": "案件A",
-            "cost": data["profit_analysis"]["cogs"] + data["profit_analysis"]["sga_cost"],
-            "current_sales": data["profit_analysis"]["sales"],
-            "target_margin": float(args.get("target_margin") or 0),
+            "project_name": project_name,
+            "cost": profit["cogs"] + sga_cost,
+            "current_sales": profit["sales"],
             "currency": "JPY",
         }
+        if target_margin is not None:
+            pricing_simulator_input["target_margin"] = float(target_margin)
         return {
             "calc_json": json.dumps(data, ensure_ascii=False, indent=2),
             "query_for_rag": rag_query,

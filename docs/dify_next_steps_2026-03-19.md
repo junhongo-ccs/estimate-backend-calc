@@ -11,6 +11,7 @@
 - `コード実行` ノードは最新形では
   - `calc_json`
   - `query_for_rag`
+  - `pricing_simulator_input`
   を返す
 - `知識検索` ノードは
   - `コード実行 / query_for_rag`
@@ -24,7 +25,7 @@
 
 ### 1. UIUX 見積はもう素通りではない
 
-`33_design_cost_standards.md` を基準に、Phase 3 ロジックを Python 側へ反映済み。
+`33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md` を基準に、Phase 3 ロジックを Python 側へ反映済み。
 
 反映内容:
 
@@ -65,8 +66,11 @@
 - Dify UI ラベル吸収
 - `tables` のノイズ除去
 - `query_for_rag`
+- `pricing_simulator_input`
 - `phase3_breakdown`
-- `33_design_cost_standards.md` ベースの Phase 3 計算
+- `33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md` ベースの Phase 3 計算
+
+旧 Dify スクリプトは削除し、このファイルだけを使う。
 
 ## 現在の推奨デモ運用
 

@@ -261,6 +261,7 @@
 
 - Dify コードノードの推奨コピペ元:
   - [dify_estimate_logic_full_for_workflow_ui_mapped.py](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py)
+  - 旧 Dify スクリプトは削除済み。この 1 ファイルのみを使う。
 
 - 全体状況:
   - [master_status.md](C:/Users/hongouj/OneDrive%20-%20NTT%20DATA/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88/GitHub/estimate-backend-calc/docs/master_status.md)

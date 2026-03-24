@@ -12,6 +12,7 @@ import html
 from pricing_simulator_input import (
     DEFAULT_CURRENCY,
     DEFAULT_PROJECT_NAME,
+    attach_pricing_simulator_input,
     build_pricing_simulator_input,
 )
 
@@ -203,8 +204,10 @@ async def calculate(request: EstimationRequest):
             req_data["estimation_profile"] = req_data["profile"]
         
         result = dify_main(**req_data)
-
-        result = _unwrap_dify_result(result)
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(result),
+            target_margin=req_data.get("target_margin"),
+        )
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -218,7 +221,10 @@ async def health():
 async def calculate_test():
     try:
         result = dify_main(**DEFAULT_TEST_REQUEST)
-        result = _unwrap_dify_result(result)
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(result),
+            target_margin=DEFAULT_TEST_REQUEST.get("target_margin"),
+        )
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -233,7 +239,10 @@ async def calculate_simple(request: SimpleEstimationRequest):
         req_data["department"] = request.department
 
         result = dify_main(**req_data)
-        result = _unwrap_dify_result(result)
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(result),
+            target_margin=req_data.get("target_margin"),
+        )
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -252,7 +261,10 @@ async def calculate_simple_get(
         req_data["department"] = department
 
         result = dify_main(**req_data)
-        result = _unwrap_dify_result(result)
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(result),
+            target_margin=req_data.get("target_margin"),
+        )
         return _utf8_json_response(result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -267,16 +279,15 @@ async def pricing_simulator_input(request: PricingSimulatorRequest):
         if not req_data.get("estimation_profile") and req_data.get("profile"):
             req_data["estimation_profile"] = req_data["profile"]
 
-        result = _unwrap_dify_result(dify_main(**req_data))
-        pricing_input = build_pricing_simulator_input(
-            result,
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(dify_main(**req_data)),
             project_name=project_name,
             target_margin=req_data.get("target_margin"),
             currency=currency,
         )
         return _utf8_json_response({
             "status": "success",
-            "pricing_simulator_input": pricing_input,
+            "pricing_simulator_input": result["pricing_simulator_input"],
             "estimation_result": result,
         })
     except Exception as e:
@@ -299,16 +310,15 @@ async def pricing_simulator_input_simple_get(
         req_data["department"] = department
         req_data["target_margin"] = target_margin
 
-        result = _unwrap_dify_result(dify_main(**req_data))
-        pricing_input = build_pricing_simulator_input(
-            result,
+        result = attach_pricing_simulator_input(
+            _unwrap_dify_result(dify_main(**req_data)),
             project_name=project_name,
             target_margin=target_margin,
             currency=currency,
         )
         return _utf8_json_response({
             "status": "success",
-            "pricing_simulator_input": pricing_input,
+            "pricing_simulator_input": result["pricing_simulator_input"],
             "estimation_result": result,
         })
     except Exception as e:
