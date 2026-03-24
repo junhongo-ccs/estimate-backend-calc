@@ -6,7 +6,7 @@ This document is updated to the latest verified state as of **2026-03-10 (JST)**
 ## Environment
 - Python: `/usr/bin/python3` (3.8.2)
 - Repo (logic): `/Users/hongoujun/Documents/GitHub/estimate-backend-calc`
-- Logic source of truth: `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_assets/code/estimate_logic.py`
+- Logic source of truth: `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/dify_estimate_logic_full_for_workflow_ui_mapped.py`
 
 ## API Wrapper
 - Entry: `/Users/hongoujun/Documents/GitHub/estimate-backend-calc/outsystems_api_wrapper.py`
@@ -542,7 +542,7 @@ Phase3 (Multi-select list):
 - マーケティング素材/LP
 
 Mapping note:
-- The labels above must map to the keys in `estimate_logic.py`.
+- The labels above must map to the keys in `dify_estimate_logic_full_for_workflow_ui_mapped.py`.
 - If you store labels only, convert them via the label map before sending to `/calculate`.
 
 ## Label -> Key Mapping (OutSystems Logic)
