@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Dify Code Node の唯一の正本。
+このファイルを Dify のコード実行ノードに貼り付けて使う。
+"""
 import json
 from typing import List, Dict, Any
 
@@ -134,7 +138,7 @@ PHASE2_LABEL_MAP = {
 }
 
 PHASE3_ITEMS = {
-    # Values are based on 33_design_cost_standards.md.
+# Values are based on 33_デザイン外注費積算基準_UIプロトタイプロゴ管理費バリアンス.md.
     # unit = "per_screen" uses screen_count, otherwise fixed by mandays * outsource daily rate.
     "ui_design": {"unit": "per_screen", "mandays": 0.375},
     "design_system": {"unit": "fixed", "mandays": 1.875},
@@ -339,32 +343,53 @@ def calculate_profitability_ccs(
     total_price: int,
     cogs: int,
     direct_labor_cost: int,
-    sga_rate_on_labor: float,
+    total_sga_rate: float,
     target_margin_input: float | None,
 ):
-    total_sga = int(direct_labor_cost * sga_rate_on_labor)
     gross_profit = total_price - cogs
+    sga_base_profit = max(gross_profit, 0)
+    total_sga = int(sga_base_profit * total_sga_rate)
     operating_profit = total_price - cogs - total_sga
     operating_margin = (operating_profit / total_price) if total_price > 0 else 0.0
 
     suggested_price = 0
-    if target_margin_input is not None and target_margin_input < 1.0:
-        denom = 1.0 - target_margin_input
-        numerator = cogs + total_sga
-        suggested_price = int(numerator / denom)
+    target_price_formula = "Sales = COGS / (1 - τ / (1 - α))"
+    max_feasible_operating_margin = 1.0 - total_sga_rate
+    target_price_feasible = False
+    target_price_infeasible_reason = None
+    if target_margin_input is not None and 0.0 <= target_margin_input < 1.0:
+        if total_sga_rate >= 1.0:
+            target_price_infeasible_reason = "total_sga_rate_gte_100pct"
+        elif target_margin_input >= max_feasible_operating_margin:
+            target_price_infeasible_reason = "target_margin_exceeds_max_operating_margin"
+        else:
+            denom = 1.0 - (target_margin_input / (1.0 - total_sga_rate))
+            if denom > 0:
+                suggested_price = int(cogs / denom)
+                target_price_feasible = True
+            else:
+                target_price_infeasible_reason = "reverse_formula_denominator_non_positive"
 
     return {
         "sales": total_price,
         "cogs": cogs,
         "gross_profit": gross_profit,
         "sga_cost": total_sga,
+        "total_sga_cost": total_sga,
         "operating_profit": operating_profit,
         "operating_margin": f"{operating_margin:.1%}",
         "target_margin_specified": f"{target_margin_input:.1%}" if target_margin_input is not None else None,
         "suggested_price_to_attain_target": suggested_price,
+        "target_price_feasible": target_price_feasible,
         "breakdown": {
-            "sga_calculation_base": "direct_labor_cost",
-            "sga_rate_on_propa_labor": f"{sga_rate_on_labor:.1%}",
+            "sga_calculation_base": "gross_profit",
+            "sga_base_amount": sga_base_profit,
+            "total_sga_rate": f"{total_sga_rate:.1%}",
+            "sga_rate_on_propa_labor": f"{total_sga_rate:.1%}",
+            "reverse_price_formula": target_price_formula,
+            "max_feasible_operating_margin": f"{max_feasible_operating_margin:.1%}",
+            "target_price_infeasible_reason": target_price_infeasible_reason,
+            "legacy_note": "pricing_simulator_input.cost remains a compatibility-oriented compact field for the downstream simple simulator.",
         },
     }
 
@@ -445,7 +470,7 @@ def main_logic(req_body, tables=None):
         total_price=final_amount,
         cogs=cogs,
         direct_labor_cost=direct_labor_cost,
-        sga_rate_on_labor=sga_rate,
+        total_sga_rate=sga_rate,
         target_margin_input=target_margin,
     )
 
@@ -494,7 +519,6 @@ def main_logic(req_body, tables=None):
 
 def main(**kwargs):
     args = dict(kwargs)
-    args["project_name"] = (args.get("project_name") or "ユーザー案件").strip() or "ユーザー案件"
 
     for key in ["features", "phase2_items", "phase3_items", "tables"]:
         args[key] = parse_list_from_text(args.get(key))
@@ -521,13 +545,18 @@ def main(**kwargs):
 
     try:
         data = main_logic(args, args.get("tables", []))
+        target_margin = args.get("target_margin")
+        project_name = (args.get("project_name") or "ユーザープロジェクト").strip() or "ユーザープロジェクト"
+        profit = data["profit_analysis"]
+        sga_cost = profit.get("total_sga_cost", profit.get("sga_cost", 0))
         pricing_simulator_input = {
-            "project_name": args["project_name"],
-            "cost": data["profit_analysis"]["cogs"] + data["profit_analysis"]["sga_cost"],
-            "current_sales": data["profit_analysis"]["sales"],
-            "target_margin": float(args.get("target_margin") or 0),
+            "project_name": project_name,
+            "cost": profit["cogs"] + sga_cost,
+            "current_sales": profit["sales"],
             "currency": "JPY",
         }
+        if target_margin is not None:
+            pricing_simulator_input["target_margin"] = float(target_margin)
         return {
             "calc_json": json.dumps(data, ensure_ascii=False, indent=2),
             "query_for_rag": rag_query,
